@@ -9,6 +9,7 @@
   "author": "Konano",
   "license": "MIT",
   "dependencies": {
+    "socks5-https-client": "^1.2.1",
     "telegraf": "^3.35.0"
   },
   "devDependencies": {},
