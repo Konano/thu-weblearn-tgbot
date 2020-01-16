@@ -12,10 +12,7 @@
     "telegraf": "^3.35.0"
   },
   "devDependencies": {},
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Konano/thu-weblearn-tgbot.git"
-  },
+  "repository": "git+https://github.com/Konano/thu-weblearn-tgbot.git",
   "bugs": {
     "url": "https://github.com/Konano/thu-weblearn-tgbot/issues"
   },
