@@ -109,7 +109,7 @@ async function compareNotifications(courseName, nowdata, predata) {
         predata = await JSON.parse(fs.readFileSync('data.json', 'utf8'));
     } catch (error) {
         let tasks = [];
-        const courses = (await helper.getCourseList(config.semester)).concat(await helper.getCourseList('2019-2020-1'));
+        const courses = (await helper.getCourseList(config.semester));
         for (let course of courses) {
             tasks.push((async () => {
                 course.files = await helper.getFileList(course.id);
@@ -133,7 +133,7 @@ async function compareNotifications(courseName, nowdata, predata) {
         await delay(60 * 1000);
         let nowdata = [];
         let tasks = [];
-        const courses = (await helper.getCourseList(config.semester)).concat(await helper.getCourseList('2019-2020-1'))
+        const courses = (await helper.getCourseList(config.semester))
         for (let course of courses) {
             tasks.push((async () => {
                 course.files = await helper.getFileList(course.id);
