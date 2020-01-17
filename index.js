@@ -9,17 +9,17 @@ const moment = require('moment');
 
 var config = require('./config');
 
-// const socksAgent = new SocksAgent({
-//     socksHost: config.proxy.host,
-//     socksPort: config.proxy.port,
-// });
-// const bot = new Telegraf(config.token, { telegram: { agent: socksAgent } })
+let bot;
+if (config.proxy.status) {
+    const socksAgent = new SocksAgent({
+        socksHost: config.proxy.host,
+        socksPort: config.proxy.port,
+    });
+    bot = new Telegraf(config.token, { telegram: { agent: socksAgent } })
+} else {
+    bot = new Telegraf(config.token)
+}
 
-const bot = new Telegraf(config.token)
-
-// bot.command('semester', (ctx) => { 
-//     config.semester = ctx.message.text.replace(/\/semester /, '') 
-// })
 bot.catch((err, ctx) => {
     console.log(`Ooops, encountered an error for ${ctx.updateType}`, err)
 })
@@ -40,7 +40,7 @@ function findCourse(predata, courseID) {
 async function compareFiles(courseName, nowdata, predata) {
     nowdata.forEach(file => {
         if (predata.filter(x => { return file.id == x.id }).length == 0) {
-            bot.telegram.sendMessage(config.owner, 
+            bot.telegram.sendMessage(config.channel, 
                 `「${courseName}」发布了新的文件：` + 
                 `[${file.title}](${file.downloadUrl.replace(/learn2018/, 'learn')})`,
                 { parse_mode : 'Markdown' });
@@ -52,7 +52,7 @@ async function compareHomeworks(courseName, nowdata, predata) {
     nowdata.forEach(homework => {
         const pre = predata.filter(x => { return homework.id == x.id });
         if (pre.length == 0) {
-            bot.telegram.sendMessage(config.owner, 
+            bot.telegram.sendMessage(config.channel, 
                 `「${courseName}」布置了新的作业：` + 
                 `[${homework.title}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
                 `截止日期：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
@@ -60,7 +60,7 @@ async function compareHomeworks(courseName, nowdata, predata) {
             return;
         }
         if (homework.submitted && !pre[0].submitted) {
-            bot.telegram.sendMessage(config.owner, 
+            bot.telegram.sendMessage(config.channel, 
                 `已提交作业：「${courseName}」` + 
                 `[${homework.title}](${homework.url.replace(/learn2018/, 'learn')})\n`,
                 { parse_mode : 'Markdown' });
@@ -76,7 +76,7 @@ async function compareHomeworks(courseName, nowdata, predata) {
                 content += `分数：${homework.grade}\n`
             if (homework.gradeContent)
                 content += `====================\n` + `${homework.gradeContent}`
-            bot.telegram.sendMessage(config.owner, content, { parse_mode : 'Markdown' });
+            bot.telegram.sendMessage(config.channel, content, { parse_mode : 'Markdown' });
         }
     });
 }
@@ -84,7 +84,7 @@ async function compareHomeworks(courseName, nowdata, predata) {
 async function compareNotifications(courseName, nowdata, predata) {
     nowdata.forEach(notification => {
         if (predata.filter(x => { return notification.id == x.id }).length == 0) {
-            bot.telegram.sendMessage(config.owner, 
+            bot.telegram.sendMessage(config.channel, 
                 `「${courseName}」发布了新的公告：` + 
                 `[${notification.title}](${notification.url.replace(/learn2018/, 'learn')})\n` +
                 `====================\n` + 
@@ -129,8 +129,10 @@ async function compareNotifications(courseName, nowdata, predata) {
         fs.writeFileSync('data.json', JSON.stringify(predata, null, 4));
     };
 
+    bot.telegram.sendMessage(config.channel, `测试`);
+
     while (true) {
-        await delay(20 * 1000);
+        await delay(60 * 1000);
         let nowdata = [];
         let tasks = [];
         const courses = (await helper.getCourseList(config.semester)).concat(await helper.getCourseList('2019-2020-1'))
@@ -150,7 +152,7 @@ async function compareNotifications(courseName, nowdata, predata) {
                     await compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
                     // await compareQuestions(course.questions, coursePredata.questions);
                 } else {
-                    bot.telegram.sendMessage(config.owner, `新课程：「${course.name}」`);
+                    bot.telegram.sendMessage(config.channel, `新课程：「${course.name}」`);
                 }
                 
                 await new Promise((resolve => {
