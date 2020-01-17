@@ -155,7 +155,7 @@ async function compareNotifications(courseName, nowdata, predata) {
                 
                 await new Promise((resolve => {
                     nowdata.push(course);
-                    console.log(course.name);
+                    // console.log(course.name);
                     resolve();
                 }));
             })());
