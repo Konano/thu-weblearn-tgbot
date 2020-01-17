@@ -4,7 +4,7 @@ const fs = require('fs');
 const htmlToText = require('html-to-text');
 const SocksAgent = require('socks5-https-client/lib/Agent');
 const thuLearnLib = require('thu-learn-lib');
-const types = require('thu-learn-lib/lib/types');
+// const types = require('thu-learn-lib/lib/types');
 const moment = require('moment');
 
 var config = require('./config');
@@ -58,6 +58,13 @@ async function compareHomeworks(courseName, nowdata, predata) {
                 `截止日期：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
                 { parse_mode : 'Markdown' });
             return;
+        }
+        if (homework.deadline.toISOString() != (typeof pre[0].deadline == 'string' ? pre[0].deadline : pre[0].deadline.toISOString())) {
+            bot.telegram.sendMessage(config.channel, 
+                `截止时间变更：「${courseName}」` + 
+                `[${homework.title}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
+                `截止日期：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
+                { parse_mode : 'Markdown' });
         }
         if (homework.submitted && !pre[0].submitted) {
             bot.telegram.sendMessage(config.channel, 
