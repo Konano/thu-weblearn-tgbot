@@ -129,8 +129,6 @@ async function compareNotifications(courseName, nowdata, predata) {
         fs.writeFileSync('data.json', JSON.stringify(predata, null, 4));
     };
 
-    bot.telegram.sendMessage(config.channel, `测试`);
-
     while (true) {
         await delay(60 * 1000);
         let nowdata = [];
