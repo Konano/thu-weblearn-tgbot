@@ -144,7 +144,7 @@ async function compareNotifications(courseName, nowdata, predata) {
     };
 
     while (true) {
-        await delay(10 * 1000);
+        await delay(60 * 1000);
         logger.info('Start checking...');
         try {
             let nowdata = [];
