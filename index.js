@@ -1,11 +1,17 @@
 const Telegraf = require('telegraf');
-const _ = require('lodash');
 const fs = require('fs');
 const htmlToText = require('html-to-text');
 const SocksAgent = require('socks5-https-client/lib/Agent');
 const thuLearnLib = require('thu-learn-lib');
 // const types = require('thu-learn-lib/lib/types');
 const moment = require('moment');
+
+const log4js = require('log4js');
+log4js.configure({
+    appenders: { console: { type: 'console' } },
+    categories: { default: { appenders: ['console'], level: 'info' } }
+});
+const logger = log4js.getLogger('log');
 
 var config = require('./config');
 
@@ -21,7 +27,7 @@ if (config.proxy.status) {
 }
 
 bot.catch((err, ctx) => {
-    console.log(`Ooops, encountered an error for ${ctx.updateType}`, err)
+    logger.error(`Ooops, encountered an error for ${ctx.updateType}`, err)
 })
 bot.launch()
 
@@ -102,8 +108,9 @@ async function compareNotifications(courseName, nowdata, predata) {
 }
 
 (async () => {
+    logger.info('Login...')
     await helper.login(config.user.name, config.user.pwd);
-    console.log('Login successful.')
+    logger.info('Login successful.')
     // const semesters = await helper.getSemesterIdList();
     // for (let semesterId of semesters) {
     //     if (semesterId === config.semester) {
@@ -137,41 +144,49 @@ async function compareNotifications(courseName, nowdata, predata) {
     };
 
     while (true) {
-        await delay(60 * 1000);
-        let nowdata = [];
-        let tasks = [];
-        const courses = (await helper.getCourseList(config.semester))
-        for (let course of courses) {
-            tasks.push((async () => {
-                course.files = await helper.getFileList(course.id);
-                // course.discussions = await helper.getDiscussionList(course.id);
-                course.notifications = await helper.getNotificationList(course.id);
-                course.homeworks = await helper.getHomeworkList(course.id);
-                // course.questions = await helper.getAnsweredQuestionList(course.id);
+        await delay(10 * 1000);
+        logger.info('Start checking...');
+        try {
+            let nowdata = [];
+            let tasks = [];
+            const courses = (await helper.getCourseList(config.semester))
+            for (let course of courses) {
+                tasks.push((async () => {
+                    course.files = await helper.getFileList(course.id);
+                    // course.discussions = await helper.getDiscussionList(course.id);
+                    course.notifications = await helper.getNotificationList(course.id);
+                    course.homeworks = await helper.getHomeworkList(course.id);
+                    // course.questions = await helper.getAnsweredQuestionList(course.id);
 
-                const coursePredata = findCourse(predata, course.id);
-                if (coursePredata != null) {
-                    await compareFiles(course.name, course.files, coursePredata.files);
-                    // await compareDiscussions(course.discussions, coursePredata.discussions);
-                    await compareNotifications(course.name, course.notifications, coursePredata.notifications);
-                    await compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
-                    // await compareQuestions(course.questions, coursePredata.questions);
-                } else {
-                    bot.telegram.sendMessage(config.channel, `新课程：「${course.name}」`);
-                }
-                
-                await new Promise((resolve => {
-                    nowdata.push(course);
-                    // console.log(course.name);
-                    resolve();
-                }));
-            })());
-        };
+                    const coursePredata = findCourse(predata, course.id);
+                    if (coursePredata != null) {
+                        await compareFiles(course.name, course.files, coursePredata.files);
+                        // await compareDiscussions(course.discussions, coursePredata.discussions);
+                        await compareNotifications(course.name, course.notifications, coursePredata.notifications);
+                        await compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
+                        // await compareQuestions(course.questions, coursePredata.questions);
+                    } else {
+                        bot.telegram.sendMessage(config.channel, `新课程：「${course.name}」`);
+                    }
+                    
+                    await new Promise((resolve => {
+                        nowdata.push(course);
+                        // logger.debug(course.name);
+                        resolve();
+                    }));
+                })());
+            };
 
-        await Promise.all(tasks);
-        fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
-        predata = nowdata;
-        // console.log('OK');
+            await Promise.all(tasks);
+            fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
+            predata = nowdata;
+            logger.info('Checked.');
+        } catch (err) {
+            logger.error(err)
+            logger.info('Relogin...')
+            await helper.login(config.user.name, config.user.pwd);
+            logger.info('Login successful.')
+        }
     }
 })();
 

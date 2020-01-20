@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "html-to-text": "^5.1.1",
+    "log4js": "^6.1.0",
     "moment": "^2.24.0",
     "socks5-https-client": "^1.2.1",
     "telegraf": "^3.35.0",
