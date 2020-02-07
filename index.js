@@ -107,6 +107,8 @@ async function compareNotifications(courseName, nowdata, predata) {
     });
 }
 
+const TIMEOUT = Symbol("Timeout");
+
 (async () => {
     logger.info('Login...')
     await helper.login(config.user.name, config.user.pwd);
@@ -177,7 +179,24 @@ async function compareNotifications(courseName, nowdata, predata) {
                 })());
             };
 
-            await Promise.all(tasks);
+            try {
+                await Promise.race([
+                   Promise.all(tasks),
+                   new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 10 * 1000))
+                ]);
+            } catch(e) {
+                if (e === TIMEOUT) {
+                    logger.error('Timeout.');
+                } else throw e;
+            }
+                
+            // await Promise.race([
+            //     Promise.all(tasks),
+            //     new Promise(resolve => setTimeout(() => {
+            //         resolve(false);
+            //     }, 10 * 1000)),
+            // ])
+            // await Promise.all(tasks);
             fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
             predata = nowdata;
             logger.info('Checked.');
@@ -189,4 +208,3 @@ async function compareNotifications(courseName, nowdata, predata) {
         }
     }
 })();
-
