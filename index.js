@@ -184,6 +184,10 @@ const TIMEOUT = Symbol("Timeout");
                    Promise.all(tasks),
                    new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 10 * 1000))
                 ]);
+                
+                fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
+                predata = nowdata;
+                logger.info('Checked.');
             } catch(e) {
                 if (e === TIMEOUT) {
                     logger.error('Timeout.');
@@ -197,9 +201,7 @@ const TIMEOUT = Symbol("Timeout");
             //     }, 10 * 1000)),
             // ])
             // await Promise.all(tasks);
-            fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
-            predata = nowdata;
-            logger.info('Checked.');
+            
         } catch (err) {
             logger.error(err)
             logger.info('Relogin...')
