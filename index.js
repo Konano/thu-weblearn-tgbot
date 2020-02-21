@@ -8,10 +8,16 @@ const moment = require('moment');
 
 const log4js = require('log4js');
 log4js.configure({
-    appenders: { console: { type: 'console' } },
-    categories: { default: { appenders: ['console'], level: 'info' } }
+    appenders: { 
+        console: { type: 'console' },
+        logfile: { type: 'file', filename: 'runtime.log' },
+        fileFilter: { type: 'logLevelFilter', level: 'info', appender: 'logfile' }
+    },
+    categories: { 
+        default: { appenders: ['console', 'fileFilter'], level: 'debug' }
+    }
 });
-const logger = log4js.getLogger('log');
+const logger = log4js.getLogger('default');
 
 var config = require('./config');
 
@@ -43,13 +49,25 @@ function findCourse(predata, courseID) {
     return ret;
 }
 
+function reBlank(str) {
+    return str.replace(/\n\s*\n/gi, '\n').replace(/^\s*/m, '').replace(/\s*$/m, '');
+}
+
+function reMarkdown(str) {
+    return str.replace(/([\*\_\`\[])/gi, '\\$1');
+}
+
 async function compareFiles(courseName, nowdata, predata) {
     nowdata.forEach(file => {
         if (predata.filter(x => { return file.id == x.id }).length == 0) {
+            logger.info(`New file: <${courseName}> ${file.title}`);
             bot.telegram.sendMessage(config.channel, 
-                `「${courseName}」发布了新的文件：` + 
-                `[${file.title}](${file.downloadUrl.replace(/learn2018/, 'learn')})`,
-                { parse_mode : 'Markdown' });
+                `「${reMarkdown(courseName)}」发布了新的文件：` + 
+                `[${reMarkdown(file.title)}](${file.downloadUrl.replace(/learn2018/, 'learn')})`,
+                { parse_mode : 'Markdown' })
+            .then(() => {}, function(error) { 
+                logger.error('New file: sendMessage FAIL');
+            });
         }
     });
 }
@@ -58,53 +76,76 @@ async function compareHomeworks(courseName, nowdata, predata) {
     nowdata.forEach(homework => {
         const pre = predata.filter(x => { return homework.id == x.id });
         if (pre.length == 0) {
+            logger.info(`New homework: <${courseName}> ${homework.title}`);
             bot.telegram.sendMessage(config.channel, 
-                `「${courseName}」布置了新的作业：` + 
-                `[${homework.title}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
+                `「${reMarkdown(courseName)}」布置了新的作业：` + 
+                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
                 `截止日期：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
-                { parse_mode : 'Markdown' });
+                { parse_mode : 'Markdown' })
+            .then(() => {}, function(error) { 
+                logger.error('New homework: sendMessage FAIL');
+            });
             return;
         }
         if (homework.deadline.toISOString() != (typeof pre[0].deadline == 'string' ? pre[0].deadline : pre[0].deadline.toISOString())) {
+            logger.info(`Homework deadline modified: <${courseName}> ${homework.title}`);
             bot.telegram.sendMessage(config.channel, 
-                `截止时间变更：「${courseName}」` + 
-                `[${homework.title}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
+                `截止时间变更：「${reMarkdown(courseName)}」` + 
+                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
                 `截止日期：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
-                { parse_mode : 'Markdown' });
+                { parse_mode : 'Markdown' })
+            .then(() => {}, function(error) { 
+                logger.error('Homework deadline modified: sendMessage FAIL');
+            });
         }
         if (homework.submitted && !pre[0].submitted) {
+            logger.info(`Homework submited: <${courseName}> ${homework.title}`);
             bot.telegram.sendMessage(config.channel, 
-                `已提交作业：「${courseName}」` + 
-                `[${homework.title}](${homework.url.replace(/learn2018/, 'learn')})\n`,
-                { parse_mode : 'Markdown' });
+                `已提交作业：「${reMarkdown(courseName)}」` + 
+                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n`,
+                { parse_mode : 'Markdown' })
+            .then(() => {}, function(error) { 
+                logger.error('Homework submited: sendMessage FAIL');
+            });
         }
         if (homework.gradeTime && (pre[0].gradeTime == undefined || 
                 homework.gradeTime.toISOString() != (typeof pre[0].gradeTime == 'string' ? pre[0].gradeTime : pre[0].gradeTime.toISOString()))) {
+            logger.info(`Homework scored: <${courseName}> ${homework.title}`);
             let content = 
-                `作业有新的评分：「${courseName}」` + 
-                `[${homework.title}](${homework.url.replace(/learn2018/, 'learn')})\n`;
+                `作业有新的评分：「${reMarkdown(courseName)}」` + 
+                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n`;
             if (homework.gradeLevel)
-                content += `分数等级：${homework.gradeLevel}\n`
+                content += `分数等级：${reMarkdown(homework.gradeLevel)}\n`
             else if (homework.grade)
-                content += `分数：${homework.grade}\n`
+                content += `分数：${reMarkdown(homework.grade)}\n`
             if (homework.gradeContent)
-                content += `====================\n` + `${homework.gradeContent}`
-            bot.telegram.sendMessage(config.channel, content, { parse_mode : 'Markdown' });
+                content += `====================\n` + `${reMarkdown(homework.gradeContent)}`
+            bot.telegram.sendMessage(config.channel, content, { parse_mode : 'Markdown' }).then(() => {}, function(error) { 
+                logger.error('Homework scored: sendMessage FAIL');
+            });
         }
     });
 }
 
 async function compareNotifications(courseName, nowdata, predata) {
-    nowdata.forEach(notification => {
-        if (predata.filter(x => { return notification.id == x.id }).length == 0) {
-            bot.telegram.sendMessage(config.channel, 
-                `「${courseName}」发布了新的公告：` + 
-                `[${notification.title}](${notification.url.replace(/learn2018/, 'learn')})\n` +
-                `====================\n` + 
-                htmlToText.fromString(notification.content),
-                { parse_mode : 'Markdown' });
-        }
-    });
+    try {
+        nowdata.forEach(notification => {
+            if (predata.filter(x => { return notification.id == x.id }).length == 0) {
+                logger.info(`New nofitication: <${courseName}> ${notification.title}`);
+                bot.telegram.sendMessage(config.channel, 
+                    `「${reMarkdown(courseName)}」发布了新的公告：` + 
+                    `[${reMarkdown(notification.title)}](${notification.url.replace(/learn2018/, 'learn')})\n` +
+                    `====================\n` + 
+                    reMarkdown(reBlank(htmlToText.fromString(notification.content))),
+                    { parse_mode : 'Markdown' })
+                .then(() => {}, function(error) { 
+                    logger.error('New nofitication: sendMessage FAIL');
+                });
+            }
+        });
+    } catch (error) {
+        logger.error(err)
+    }
 }
 
 const TIMEOUT = Symbol("Timeout");
@@ -146,8 +187,7 @@ const TIMEOUT = Symbol("Timeout");
     };
 
     while (true) {
-        await delay(60 * 1000);
-        logger.info('Start checking...');
+        logger.debug('Start checking...');
         try {
             let nowdata = [];
             let tasks = [];
@@ -168,12 +208,14 @@ const TIMEOUT = Symbol("Timeout");
                         await compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
                         // await compareQuestions(course.questions, coursePredata.questions);
                     } else {
-                        bot.telegram.sendMessage(config.channel, `新课程：「${course.name}」`);
+                        logger.info(`New course: <${course.name}>`);
+                        bot.telegram.sendMessage(config.channel, `新课程：「${reMarkdown(course.name)}」`).then(() => {}, function(error) { 
+                            logger.error('New course: sendMessage FAIL');
+                        });
                     }
                     
                     await new Promise((resolve => {
                         nowdata.push(course);
-                        // logger.debug(course.name);
                         resolve();
                     }));
                 })());
@@ -187,7 +229,7 @@ const TIMEOUT = Symbol("Timeout");
                 
                 fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
                 predata = nowdata;
-                logger.info('Checked.');
+                logger.debug('Checked.');
             } catch(e) {
                 if (e === TIMEOUT) {
                     logger.error('Timeout.');
@@ -208,5 +250,6 @@ const TIMEOUT = Symbol("Timeout");
             await helper.login(config.user.name, config.user.pwd);
             logger.info('Login successful.')
         }
+        await delay(60 * 1000);
     }
 })();
