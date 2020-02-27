@@ -50,14 +50,22 @@ function findCourse(predata, courseID) {
 }
 
 function reBlank(str) {
-    return str.replace(/\n\s*\n/gi, '\n').replace(/^\s*/m, '').replace(/\s*$/m, '');
+    if (typeof str == "string") {
+        return str.replace(/\n\s*\n/gi, '\n').replace(/^\s*/m, '').replace(/\s*$/m, '');
+    } else {
+        return str;
+    }
 }
 
 function reMarkdown(str) {
-    return str.replace(/([\*\_\`\[])/gi, '\\$1');
+    if (typeof str == "string") {
+        return str.replace(/([\*\_\`\[])/gi, '\\$1');
+    } else {
+        return str;
+    }
 }
 
-async function compareFiles(courseName, nowdata, predata) {
+function compareFiles(courseName, nowdata, predata) {
     nowdata.forEach(file => {
         if (predata.filter(x => { return file.id == x.id }).length == 0) {
             logger.info(`New file: <${courseName}> ${file.title}`);
@@ -72,7 +80,7 @@ async function compareFiles(courseName, nowdata, predata) {
     });
 }
 
-async function compareHomeworks(courseName, nowdata, predata) {
+function compareHomeworks(courseName, nowdata, predata) {
     nowdata.forEach(homework => {
         const pre = predata.filter(x => { return homework.id == x.id });
         if (pre.length == 0) {
@@ -127,7 +135,7 @@ async function compareHomeworks(courseName, nowdata, predata) {
     });
 }
 
-async function compareNotifications(courseName, nowdata, predata) {
+function compareNotifications(courseName, nowdata, predata) {
     try {
         nowdata.forEach(notification => {
             if (predata.filter(x => { return notification.id == x.id }).length == 0) {
@@ -150,15 +158,17 @@ async function compareNotifications(courseName, nowdata, predata) {
 
 const TIMEOUT = Symbol("Timeout");
 
+async function getCourseList(semester) {
+    return Promise.race([
+        helper.getCourseList(semester),
+        new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 30 * 1000))
+    ])
+}
+
 (async () => {
-    logger.info('Login...')
+    logger.info('Login...');
     await helper.login(config.user.name, config.user.pwd);
-    logger.info('Login successful.')
-    // const semesters = await helper.getSemesterIdList();
-    // for (let semesterId of semesters) {
-    //     if (semesterId === config.semester) {
-    //     }
-    // }
+    logger.info('Login successful.');
 
     let predata = [];
 
@@ -166,7 +176,7 @@ const TIMEOUT = Symbol("Timeout");
         predata = await JSON.parse(fs.readFileSync('data.json', 'utf8'));
     } catch (error) {
         let tasks = [];
-        const courses = (await helper.getCourseList(config.semester));
+        const courses = await helper.getCourseList(config.semester);
         for (let course of courses) {
             tasks.push((async () => {
                 course.files = await helper.getFileList(course.id);
@@ -191,7 +201,8 @@ const TIMEOUT = Symbol("Timeout");
         try {
             let nowdata = [];
             let tasks = [];
-            const courses = (await helper.getCourseList(config.semester))
+            logger.debug('Getting course list...');
+            const courses = await getCourseList(config.semester);
             for (let course of courses) {
                 tasks.push((async () => {
                     course.files = await helper.getFileList(course.id);
@@ -202,53 +213,43 @@ const TIMEOUT = Symbol("Timeout");
 
                     const coursePredata = findCourse(predata, course.id);
                     if (coursePredata != null) {
-                        await compareFiles(course.name, course.files, coursePredata.files);
-                        // await compareDiscussions(course.discussions, coursePredata.discussions);
-                        await compareNotifications(course.name, course.notifications, coursePredata.notifications);
-                        await compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
-                        // await compareQuestions(course.questions, coursePredata.questions);
+                        compareFiles(course.name, course.files, coursePredata.files);
+                        // compareDiscussions(course.discussions, coursePredata.discussions);
+                        compareNotifications(course.name, course.notifications, coursePredata.notifications);
+                        compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
+                        // compareQuestions(course.questions, coursePredata.questions);
                     } else {
                         logger.info(`New course: <${course.name}>`);
                         bot.telegram.sendMessage(config.channel, `新课程：「${reMarkdown(course.name)}」`).then(() => {}, function(error) { 
                             logger.error('New course: sendMessage FAIL');
                         });
                     }
-                    
                     await new Promise((resolve => {
                         nowdata.push(course);
+                        // logger.debug(`Course <${course.name}> finished.`);
                         resolve();
                     }));
                 })());
             };
 
-            try {
-                await Promise.race([
-                   Promise.all(tasks),
-                   new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 10 * 1000))
-                ]);
-                
-                fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
-                predata = nowdata;
-                logger.debug('Checked.');
-            } catch(e) {
-                if (e === TIMEOUT) {
-                    logger.error('Timeout.');
-                } else throw e;
-            }
-                
-            // await Promise.race([
-            //     Promise.all(tasks),
-            //     new Promise(resolve => setTimeout(() => {
-            //         resolve(false);
-            //     }, 10 * 1000)),
-            // ])
-            // await Promise.all(tasks);
-            
+            await Promise.race([
+                Promise.all(tasks),
+                new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 60 * 1000))
+            ]);
+
+            fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
+            predata = nowdata;
+            logger.debug('Checked.');
         } catch (err) {
-            logger.error(err)
-            logger.info('Relogin...')
-            await helper.login(config.user.name, config.user.pwd);
-            logger.info('Login successful.')
+            if (err === TIMEOUT) {
+                logger.error('Timeout.');
+                continue;
+            } else {
+                logger.error(err);
+                logger.info('Relogin...');
+                await helper.login(config.user.name, config.user.pwd);
+                logger.info('Login successful.');
+            }
         }
         await delay(60 * 1000);
     }
