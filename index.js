@@ -201,7 +201,7 @@ async function getCourseList(semester) {
         try {
             let nowdata = [];
             let tasks = [];
-            logger.debug('Getting course list...');
+            // logger.debug('Getting course list...');
             const courses = await getCourseList(config.semester);
             for (let course of courses) {
                 tasks.push((async () => {
