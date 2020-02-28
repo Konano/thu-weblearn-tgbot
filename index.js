@@ -313,3 +313,60 @@ async function getCourseList(semester) {
         await delay(60 * 1000);
     }
 })();
+
+function rankCard(card) {
+    if (card.due == null) return 0;
+    if (card.dueComplete) return 1;
+    if (card.due <= (new Date()).toISOString()) return 2;
+    return 3;
+}
+
+async function sortList(listID) {
+    let due = null;
+    await trello.getCardsOnList(listID).then(cardsList => {
+        let _pos = cardsList.map(x => x.pos).sort((a, b) => a - b);
+        // console.log(_pos)
+        cardsList.sort((a, b) => {
+            if (rankCard(a) != rankCard(b)) {
+                return rankCard(a) - rankCard(b)
+            } else if (rankCard(a) == 3) {
+                return (a.due < b.due ? 1 : a.due > b.due ? -1 : a.pos - b.pos) 
+            } else {
+                return a.pos - b.pos
+            }
+        });
+        for (let i = 0; i < cardsList.length; i++) if (cardsList[i].pos != _pos[i]) {
+            // console.log(cardsList[i].pos, _pos[i])
+            trello.updateCard(cardsList[i].id, 'pos', _pos[i]);
+        }
+        due = cardsList[cardsList.length - 1].due;
+    });
+    return due;
+}
+
+(async () => {
+    while (true) {
+        logger.debug('Start Trello sorting...');
+        let TrelloLists = [];
+        await trello.getListsOnBoardByFilter(config.trello.board, 'open').then(lists => lists.forEach(list => TrelloLists.push(list)));
+        // sortList(TrelloLists[0].id).then((resolve,reject) => console.log(resolve))
+        TrelloLists = await Promise.all(TrelloLists.map(async list => {
+            list.due = await sortList(list.id);
+            return list;
+        }));
+        let _pos = TrelloLists.map(x => x.pos).sort((a, b) => a - b);
+        TrelloLists.sort((a, b) => {
+            if (a.due == null && b.due == null) {
+                return a.pos - b.pos
+            } else if (a.due == null || b.due == null) {
+                return (a.due == null ? 1 : -1);
+            } else 
+            return (a.due > b.due ? 1 : a.due < b.due ? -1 : a.pos - b.pos)
+        });
+        for (let i = 0; i < TrelloLists.length; i++) if (TrelloLists[i].pos != _pos[i]) {
+            trello.makeRequest('put', `/1/lists/${TrelloLists[i].id}/pos`, { value: _pos[i] });
+        }
+        logger.debug('Stop Trello sorting');
+        await delay(2 * 60 * 1000);
+    }
+})();
