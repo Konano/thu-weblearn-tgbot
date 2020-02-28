@@ -151,7 +151,7 @@ function compareNotifications(courseName, nowdata, predata) {
                 });
             }
         });
-    } catch (error) {
+    } catch (err) {
         logger.error(err)
     }
 }
@@ -174,7 +174,8 @@ async function getCourseList(semester) {
 
     try {
         predata = await JSON.parse(fs.readFileSync('data.json', 'utf8'));
-    } catch (error) {
+    } catch (err) {
+        logger.error(err);
         let tasks = [];
         const courses = await helper.getCourseList(config.semester);
         for (let course of courses) {
