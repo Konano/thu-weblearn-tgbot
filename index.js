@@ -191,7 +191,7 @@ async function TrelloHomeworks(courseName, homeworks) {
                 logger.info(`Trello: addCard "${homework.title}"`)
                 trello.addCard(homework.title, '', list[0].id)
                     .then(newcard => {
-                        trello.addLabelToCard(newcard.id, '5badae589c16fb124a8f8bd0');
+                        trello.addLabelToCard(newcard.id, config.trello.label);
                         trello.addDueDateToCard(newcard.id, homework.deadline);
                     });
             }
