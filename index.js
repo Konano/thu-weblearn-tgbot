@@ -187,7 +187,7 @@ async function TrelloHomeworks(courseName, homeworks) {
     homeworks.forEach(homework => {
         let card = cards.filter(card => card.name == homework.title);
         if (card.length == 0) {
-            if (homework.submitted == false) {
+            if (homework.submitted == false && homework.deadline > (new Date())) {
                 logger.info(`Trello: addCard "${homework.title}"`)
                 trello.addCard(homework.title, '', list[0].id)
                     .then(newcard => {
@@ -367,6 +367,6 @@ async function sortList(listID) {
             trello.makeRequest('put', `/1/lists/${TrelloLists[i].id}/pos`, { value: _pos[i] });
         }
         logger.debug('Stop Trello sorting');
-        await delay(2 * 60 * 1000);
+        await delay(60 * 1000);
     }
 })();
