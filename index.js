@@ -5,6 +5,7 @@ const SocksAgent = require('socks5-https-client/lib/Agent');
 const thuLearnLib = require('thu-learn-lib');
 // const types = require('thu-learn-lib/lib/types');
 const moment = require('moment');
+const Trello = require('trello');
 
 const log4js = require('log4js');
 log4js.configure({
@@ -152,8 +153,61 @@ function compareNotifications(courseName, nowdata, predata) {
             }
         });
     } catch (err) {
-        logger.error(err)
+        logger.error(err);
     }
+}
+
+const trello = new Trello(config.trello.key, config.trello.token);
+let TrelloLists = [];
+
+function TrelloGetCourseList(courseName) {
+    return TrelloLists.filter(list => list.name == courseName);
+}
+
+async function TrelloGetHomeworkCards(listID) {
+    try {
+        let cards = [];
+        await trello.getCardsOnList(listID).then(cardsList => {
+            cardsList.filter(card => card.labels.some(label => label.name == 'Homework')).forEach(card => cards.push(card))
+        })
+        return cards;
+    } catch (err) {
+        logger.error(err);
+    }
+}
+
+async function TrelloHomeworks(courseName, homeworks) {
+    let list = TrelloGetCourseList(courseName);
+    if (list.length == 0) {
+        logger.error(`Trello List not found: ${courseName}`);
+        return;
+    }
+    let cards = await TrelloGetHomeworkCards(list[0].id);
+    // console.log(courseName, cards);
+    homeworks.forEach(homework => {
+        let card = cards.filter(card => card.name == homework.title);
+        if (card.length == 0) {
+            if (homework.submitted == false) {
+                logger.info(`Trello: addCard "${homework.title}"`)
+                trello.addCard(homework.title, '', list[0].id)
+                    .then(newcard => {
+                        trello.addLabelToCard(newcard.id, '5badae589c16fb124a8f8bd0');
+                        trello.addDueDateToCard(newcard.id, homework.deadline);
+                    });
+            }
+        } else {
+            card = card[0];
+            if (card.due != homework.deadline.toISOString()) {
+                logger.info(`Trello: Update due "${homework.title}"`)
+                trello.updateCard(card.id, 'due', homework.deadline);
+            }
+            if (homework.submitted) {
+                logger.info(`Trello: Update dueComplete "${homework.title}"`)
+                trello.updateCard(card.id, 'dueComplete', true);
+                trello.updateCard(card.id, 'closed', true);
+            }
+        }
+    });
 }
 
 const TIMEOUT = Symbol("Timeout");
@@ -166,6 +220,8 @@ async function getCourseList(semester) {
 }
 
 (async () => {
+    await trello.getListsOnBoardByFilter(config.trello.board, 'open').then(lists => lists.forEach(list => TrelloLists.push(list)))
+
     logger.info('Login...');
     await helper.login(config.user.name, config.user.pwd);
     logger.info('Login successful.');
@@ -211,6 +267,8 @@ async function getCourseList(semester) {
                     course.notifications = await helper.getNotificationList(course.id);
                     course.homeworks = await helper.getHomeworkList(course.id);
                     // course.questions = await helper.getAnsweredQuestionList(course.id);
+
+                    await TrelloHomeworks(course.name, course.homeworks);
 
                     const coursePredata = findCourse(predata, course.id);
                     if (coursePredata != null) {

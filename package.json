@@ -14,7 +14,8 @@
     "moment": "^2.24.0",
     "socks5-https-client": "^1.2.1",
     "telegraf": "^3.35.0",
-    "thu-learn-lib": "^1.1.4"
+    "thu-learn-lib": "^1.1.4",
+    "trello": "^0.10.0"
   },
   "devDependencies": {},
   "repository": "git+https://github.com/Konano/thu-weblearn-tgbot.git",
