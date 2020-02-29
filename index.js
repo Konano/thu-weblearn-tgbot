@@ -168,7 +168,9 @@ async function TrelloGetHomeworkCards(listID) {
     try {
         let cards = [];
         await trello.getCardsOnList(listID).then(cardsList => {
-            cardsList.filter(card => card.labels.some(label => label.name == 'Homework')).forEach(card => cards.push(card))
+            cardsList.filter(card => card.labels.some(label => label.name == 'Homework')).forEach(
+                card => cards.push(card)
+            )
         })
         return cards;
     } catch (err) {
@@ -220,7 +222,9 @@ async function getCourseList(semester) {
 }
 
 (async () => {
-    await trello.getListsOnBoardByFilter(config.trello.board, 'open').then(lists => lists.forEach(list => TrelloLists.push(list)))
+    await trello.getListsOnBoardByFilter(config.trello.board, 'open').then(
+        lists => lists.forEach(list => TrelloLists.push(list))
+    )
 
     logger.info('Login...');
     await helper.login(config.user.name, config.user.pwd);
@@ -346,27 +350,33 @@ async function sortList(listID) {
 
 (async () => {
     while (true) {
-        logger.debug('Start Trello sorting...');
-        let TrelloLists = [];
-        await trello.getListsOnBoardByFilter(config.trello.board, 'open').then(lists => lists.forEach(list => TrelloLists.push(list)));
-        // sortList(TrelloLists[0].id).then((resolve,reject) => console.log(resolve))
-        TrelloLists = await Promise.all(TrelloLists.map(async list => {
-            list.due = await sortList(list.id);
-            return list;
-        }));
-        let _pos = TrelloLists.map(x => x.pos).sort((a, b) => a - b);
-        TrelloLists.sort((a, b) => {
-            if (a.due == null && b.due == null) {
-                return a.pos - b.pos
-            } else if (a.due == null || b.due == null) {
-                return (a.due == null ? 1 : -1);
-            } else 
-            return (a.due > b.due ? 1 : a.due < b.due ? -1 : a.pos - b.pos)
-        });
-        for (let i = 0; i < TrelloLists.length; i++) if (TrelloLists[i].pos != _pos[i]) {
-            trello.makeRequest('put', `/1/lists/${TrelloLists[i].id}/pos`, { value: _pos[i] });
+        try {
+            logger.debug('Start Trello sorting...');
+            let TrelloLists = [];
+            await trello.getListsOnBoardByFilter(config.trello.board, 'open').then(
+                lists => lists.forEach(list => TrelloLists.push(list))
+            );
+            // sortList(TrelloLists[0].id).then((resolve,reject) => console.log(resolve))
+            TrelloLists = await Promise.all(TrelloLists.map(async list => {
+                list.due = await sortList(list.id);
+                return list;
+            }));
+            let _pos = TrelloLists.map(x => x.pos).sort((a, b) => a - b);
+            TrelloLists.sort((a, b) => {
+                if (a.due == null && b.due == null) {
+                    return a.pos - b.pos
+                } else if (a.due == null || b.due == null) {
+                    return (a.due == null ? 1 : -1);
+                } else 
+                return (a.due > b.due ? 1 : a.due < b.due ? -1 : a.pos - b.pos)
+            });
+            for (let i = 0; i < TrelloLists.length; i++) if (TrelloLists[i].pos != _pos[i]) {
+                trello.makeRequest('put', `/1/lists/${TrelloLists[i].id}/pos`, { value: _pos[i] });
+            }
+            logger.debug('Stop Trello sorting');
+        } catch (err) {
+            logger.error('ERROR in Trello sorting');
         }
-        logger.debug('Stop Trello sorting');
         await delay(60 * 1000);
     }
 })();
