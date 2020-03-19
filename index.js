@@ -3,7 +3,6 @@ const fs = require('fs');
 const htmlToText = require('html-to-text');
 const SocksAgent = require('socks5-https-client/lib/Agent');
 const thuLearnLib = require('thu-learn-lib');
-// const types = require('thu-learn-lib/lib/types');
 const moment = require('moment');
 const Trello = require('trello');
 
