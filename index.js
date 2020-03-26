@@ -225,9 +225,17 @@ async function getCourseList(semester) {
         lists => lists.forEach(list => TrelloLists.push(list))
     )
 
-    logger.info('Login...');
-    await helper.login(config.user.name, config.user.pwd);
-    logger.info('Login successful.');
+    while (true) {
+        try {
+            logger.info('Login...');
+            await Promise.race([
+                helper.login(config.user.name, config.user.pwd),
+                new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 60 * 1000))
+            ]);
+            logger.info('Login successful.');
+            break;
+        } catch (err) { logger.error('Timeout.'); }
+    }
 
     let predata = [];
 
@@ -308,9 +316,17 @@ async function getCourseList(semester) {
                 continue;
             } else {
                 logger.error(err);
-                logger.info('Relogin...');
-                await helper.login(config.user.name, config.user.pwd);
-                logger.info('Login successful.');
+                while (true) {
+                    try {
+                        logger.info('Relogin...');
+                        await Promise.race([
+                            helper.login(config.user.name, config.user.pwd),
+                            new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 60 * 1000))
+                        ]);
+                        logger.info('Login successful.');
+                        break;
+                    } catch (err) { logger.error('Timeout.'); }
+                }
             }
         }
         await delay(60 * 1000);
