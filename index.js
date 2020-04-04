@@ -173,7 +173,7 @@ async function TrelloGetHomeworkCards(listID) {
         })
         return cards;
     } catch (err) {
-        logger.error(err);
+        logger.error('TrelloGetHomeworkCards Error');
     }
 }
 
@@ -184,6 +184,7 @@ async function TrelloHomeworks(courseName, homeworks) {
         return;
     }
     let cards = await TrelloGetHomeworkCards(list[0].id);
+    if (cards == undefined) return;
     // console.log(courseName, cards);
     homeworks.forEach(homework => {
         let card = cards.filter(card => card.name == homework.title);
@@ -234,7 +235,7 @@ async function getCourseList(semester) {
             ]);
             logger.info('Login successful.');
             break;
-        } catch (err) { logger.error('Timeout.'); }
+        } catch (err) { logger.error('Login timeout.'); }
     }
 
     let predata = [];
@@ -323,9 +324,9 @@ async function getCourseList(semester) {
                             helper.login(config.user.name, config.user.pwd),
                             new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 60 * 1000))
                         ]);
-                        logger.info('Login successful.');
+                        logger.info('Relogin successful.');
                         break;
-                    } catch (err) { logger.error('Timeout.'); }
+                    } catch (err) { logger.error('Relogin timeout.'); }
                 }
             }
         }
@@ -368,10 +369,17 @@ async function sortList(listID) {
         try {
             logger.debug('Start Trello sorting...');
             let TrelloLists = [];
-            await trello.getListsOnBoardByFilter(config.trello.board, 'open').then(
-                lists => lists.forEach(list => TrelloLists.push(list))
-            );
-            // sortList(TrelloLists[0].id).then((resolve,reject) => console.log(resolve))
+            while (true) {
+                try {
+                    await Promise.race([
+                        trello.getListsOnBoardByFilter(config.trello.board, 'open').then(
+                            lists => lists.forEach(list => TrelloLists.push(list))
+                        ),
+                        new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 60 * 1000))
+                    ]);
+                    break;
+                } catch (_) { logger.error('getListsOnBoard timeout.'); }
+            }
             TrelloLists = await Promise.all(TrelloLists.map(async list => {
                 list.due = await sortList(list.id);
                 return list;
@@ -390,7 +398,7 @@ async function sortList(listID) {
             }
             logger.debug('Stop Trello sorting');
         } catch (err) {
-            logger.error('ERROR in Trello sorting');
+            logger.error('Error in Trello sorting');
         }
         await delay(60 * 1000);
     }
