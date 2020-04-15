@@ -80,6 +80,19 @@ function compareFiles(courseName, nowdata, predata) {
     });
 }
 
+let succTimestamp = new Date();
+let Date2ms = (day, hour) => (day * 24 + hour) * 60 * 60 * 1000;
+
+function reminder(deadline) {
+    let now = new Date();
+    return (deadline < now) ? null :   
+        (deadline - now < Date2ms(3, 0) && deadline - succTimestamp > Date2ms(3, 0)) ? ['*3 天*', '3 days'] :
+        (deadline - now < Date2ms(1, 0) && deadline - succTimestamp > Date2ms(1, 0)) ? ['*1 天*', '1 day'] :
+        (deadline - now < Date2ms(0, 6) && deadline - succTimestamp > Date2ms(0, 6)) ? ['*6 小时*', '6 hours'] :
+        (deadline - now < Date2ms(0, 1) && deadline - succTimestamp > Date2ms(0, 1)) ? ['*1 小时*', '1 hour'] :
+        null;
+}
+
 function compareHomeworks(courseName, nowdata, predata) {
     nowdata.forEach(homework => {
         const pre = predata.filter(x => { return homework.id == x.id });
@@ -88,22 +101,34 @@ function compareHomeworks(courseName, nowdata, predata) {
             bot.telegram.sendMessage(config.channel, 
                 `「${reMarkdown(courseName)}」布置了新的作业：` + 
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
-                `截止日期：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
+                `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
                 { parse_mode : 'Markdown' })
             .then(() => {}, function(error) { 
                 logger.error('New homework: sendMessage FAIL');
             });
             return;
         }
+        let ret;
         if (homework.deadline.toISOString() != (typeof pre[0].deadline == 'string' ? pre[0].deadline : pre[0].deadline.toISOString())) {
             logger.info(`Homework deadline modified: <${courseName}> ${homework.title}`);
             bot.telegram.sendMessage(config.channel, 
                 `截止时间变更：「${reMarkdown(courseName)}」` + 
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
-                `截止日期：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
+                `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
                 { parse_mode : 'Markdown' })
             .then(() => {}, function(error) { 
                 logger.error('Homework deadline modified: sendMessage FAIL');
+            });
+        } else if ((ret = reminder(homework.deadline)) != null) {
+            logger.info(`Homework deadline ${ret[1]} left: <${courseName}> ${homework.title}`);
+            bot.telegram.sendMessage(config.channel, 
+                `作业还剩 ${ret[0]}！\n` + 
+                `「${reMarkdown(courseName)}」` +
+                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
+                `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
+                { parse_mode : 'Markdown' })
+            .then(() => {}, function(error) { 
+                logger.error(`Homework deadline ${ret[1]} left: sendMessage FAIL`);
             });
         }
         if (homework.submitted && !pre[0].submitted) {
@@ -248,6 +273,7 @@ async function getCourseList(semester) {
 
             fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
             predata = nowdata;
+            succTimestamp = new Date();
             logger.debug('Checked.');
         } catch (err) {
             if (err === TIMEOUT) {
