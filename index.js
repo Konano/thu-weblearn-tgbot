@@ -119,7 +119,7 @@ function compareHomeworks(courseName, nowdata, predata) {
             .then(() => {}, function(error) { 
                 logger.error('Homework deadline modified: sendMessage FAIL');
             });
-        } else if ((ret = reminder(homework.deadline)) != null) {
+        } else if (homework.submitted == false && (ret = reminder(homework.deadline)) != null) {
             logger.info(`Homework deadline ${ret[1]} left: <${courseName}> ${homework.title}`);
             bot.telegram.sendMessage(config.channel, 
                 `作业还剩 ${ret[0]}！\n` + 
