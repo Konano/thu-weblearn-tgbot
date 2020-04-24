@@ -35,7 +35,7 @@ if (config.proxy.status) {
 bot.catch((err, ctx) => {
     logger.error(`Ooops, encountered an error for ${ctx.updateType}`, err)
 })
-bot.launch()
+// bot.launch()
 
 let helper = new thuLearnLib.Learn2018Helper();
 
