@@ -80,17 +80,21 @@ function compareFiles(courseName, nowdata, predata) {
     });
 }
 
-let succTimestamp = new Date();
+let preTimestamp = new Date();
+let nowTimestamp = new Date();
 let Date2ms = (day, hour) => (day * 24 + hour) * 60 * 60 * 1000;
 
 function reminder(deadline) {
-    let now = new Date();
-    return (deadline < now) ? null :   
-        (deadline - now < Date2ms(3, 0) && deadline - succTimestamp > Date2ms(3, 0)) ? ['*3 天*', '3 days'] :
-        (deadline - now < Date2ms(1, 0) && deadline - succTimestamp > Date2ms(1, 0)) ? ['*1 天*', '1 day'] :
-        (deadline - now < Date2ms(0, 6) && deadline - succTimestamp > Date2ms(0, 6)) ? ['*6 小时*', '6 hours'] :
-        (deadline - now < Date2ms(0, 1) && deadline - succTimestamp > Date2ms(0, 1)) ? ['*1 小时*', '1 hour'] :
+    return (deadline < nowTimestamp) ? null :   
+        (deadline - nowTimestamp < Date2ms(3, 0) && deadline - preTimestamp > Date2ms(3, 0)) ? ['*3 天*', '3 days'] :
+        (deadline - nowTimestamp < Date2ms(1, 0) && deadline - preTimestamp > Date2ms(1, 0)) ? ['*1 天*', '1 day'] :
+        (deadline - nowTimestamp < Date2ms(0, 6) && deadline - preTimestamp > Date2ms(0, 6)) ? ['*6 小时*', '6 hours'] :
+        (deadline - nowTimestamp < Date2ms(0, 1) && deadline - preTimestamp > Date2ms(0, 1)) ? ['*1 小时*', '1 hour'] :
         null;
+}
+
+function overdue(deadline) {
+    return deadline < nowTimestamp && deadline > preTimestamp; 
 }
 
 function compareHomeworks(courseName, nowdata, predata) {
@@ -129,6 +133,17 @@ function compareHomeworks(courseName, nowdata, predata) {
                 { parse_mode : 'Markdown' })
             .then(() => {}, function(error) { 
                 logger.error(`Homework deadline ${ret[1]} left: sendMessage FAIL`);
+            });
+        } else if (homework.submitted == false && overdue(homework.deadline)) {
+            logger.info(`Homework deadline overdue: <${courseName}> ${homework.title}`);
+            bot.telegram.sendMessage(config.channel, 
+                `作业截止！\n` + 
+                `「${reMarkdown(courseName)}」` +
+                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
+                `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
+                { parse_mode : 'Markdown' })
+            .then(() => {}, function(error) { 
+                logger.error(`Homework deadline overdue: sendMessage FAIL`);
             });
         }
         if (homework.submitted && !pre[0].submitted) {
@@ -295,6 +310,7 @@ async function getCourseList(semester) {
         try {
             let nowdata = [];
             let tasks = [];
+            nowTimestamp = new Date();
             // logger.debug('Getting course list...');
             const courses = await getCourseList(config.semester);
             for (let course of courses) {
@@ -330,12 +346,12 @@ async function getCourseList(semester) {
 
             await Promise.race([
                 Promise.all(tasks),
-                new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 60 * 1000))
+                new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 120 * 1000))
             ]);
 
             fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
             predata = nowdata;
-            succTimestamp = new Date();
+            preTimestamp = nowTimestamp;
             logger.debug('Checked.');
         } catch (err) {
             if (err === TIMEOUT) {
@@ -405,6 +421,7 @@ async function sortList(listID) {
                     ]);
                     break;
                 } catch (_) { logger.error('getListsOnBoard timeout.'); }
+                await delay(60 * 1000);
             }
             TrelloLists = await Promise.all(TrelloLists.map(async list => {
                 list.due = await sortList(list.id);
