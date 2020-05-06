@@ -251,6 +251,7 @@ async function getCourseList(semester) {
             let nowdata = [];
             let tasks = [];
             nowTimestamp = new Date();
+
             // logger.debug('Getting course list...');
             const courses = await getCourseList(config.semester);
             for (let course of courses) {
@@ -260,20 +261,6 @@ async function getCourseList(semester) {
                     course.notifications = await helper.getNotificationList(course.id);
                     course.homeworks = await helper.getHomeworkList(course.id);
                     // course.questions = await helper.getAnsweredQuestionList(course.id);
-
-                    const coursePredata = findCourse(predata, course.id);
-                    if (coursePredata != null) {
-                        compareFiles(course.name, course.files, coursePredata.files);
-                        // compareDiscussions(course.discussions, coursePredata.discussions);
-                        compareNotifications(course.name, course.notifications, coursePredata.notifications);
-                        compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
-                        // compareQuestions(course.questions, coursePredata.questions);
-                    } else {
-                        logger.info(`New course: <${course.name}>`);
-                        bot.telegram.sendMessage(config.channel, `新课程：「${reMarkdown(course.name)}」`).then(() => {}, function(error) { 
-                            logger.error('New course: sendMessage FAIL');
-                        });
-                    }
                     await new Promise((resolve => {
                         nowdata.push(course);
                         // logger.debug(`Course <${course.name}> finished.`);
@@ -281,11 +268,27 @@ async function getCourseList(semester) {
                     }));
                 })());
             };
-
             await Promise.race([
                 Promise.all(tasks),
                 new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 120 * 1000))
             ]);
+            // logger.debug('Got all data.');
+
+            for (let course of nowdata) {
+                const coursePredata = findCourse(predata, course.id);
+                if (coursePredata != null) {
+                    compareFiles(course.name, course.files, coursePredata.files);
+                    // compareDiscussions(course.discussions, coursePredata.discussions);
+                    compareNotifications(course.name, course.notifications, coursePredata.notifications);
+                    compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
+                    // compareQuestions(course.questions, coursePredata.questions);
+                } else {
+                    logger.info(`New course: <${course.name}>`);
+                    bot.telegram.sendMessage(config.channel, `新课程：「${reMarkdown(course.name)}」`).then(() => {}, function(error) { 
+                        logger.error('New course: sendMessage FAIL');
+                    });
+                }
+            }
 
             fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
             predata = nowdata;
