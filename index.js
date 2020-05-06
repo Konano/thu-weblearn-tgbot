@@ -217,39 +217,46 @@ async function TrelloGetHomeworkCards(listID) {
     }
 }
 
+const TRELLOERROR = Symbol("Trello Error");
+
 async function TrelloHomeworks(courseName, homeworks) {
-    let list = TrelloGetCourseList(courseName);
-    if (list.length == 0) {
-        logger.error(`Trello List not found: ${courseName}`);
-        return;
-    }
-    let cards = await TrelloGetHomeworkCards(list[0].id);
-    if (cards == undefined) return;
-    // console.log(courseName, cards);
-    homeworks.forEach(homework => {
-        let card = cards.filter(card => card.name == homework.title);
-        if (card.length == 0) {
-            if (homework.submitted == false && homework.deadline > (new Date())) {
-                logger.info(`Trello: addCard "${homework.title}"`)
-                trello.addCard(homework.title, '', list[0].id)
-                    .then(newcard => {
-                        trello.addLabelToCard(newcard.id, config.trello.label);
-                        trello.addDueDateToCard(newcard.id, homework.deadline);
-                    });
-            }
-        } else {
-            card = card[0];
-            if (card.due != homework.deadline.toISOString()) {
-                logger.info(`Trello: Update due "${homework.title}"`)
-                trello.updateCard(card.id, 'due', homework.deadline);
-            }
-            if (homework.submitted) {
-                logger.info(`Trello: Update dueComplete "${homework.title}"`)
-                trello.updateCard(card.id, 'dueComplete', true);
-                trello.updateCard(card.id, 'closed', true);
-            }
+    try {
+        let list = TrelloGetCourseList(courseName);
+        if (list.length == 0) {
+            logger.error(`Trello List not found: ${courseName}`);
+            return;
         }
-    });
+        let cards = await TrelloGetHomeworkCards(list[0].id);
+        if (cards == undefined) return;
+        // console.log(courseName, cards);
+        homeworks.forEach(homework => {
+            let card = cards.filter(card => card.name == homework.title);
+            if (card.length == 0) {
+                if (homework.submitted == false && homework.deadline > (new Date())) {
+                    logger.info(`Trello: addCard "${homework.title}"`)
+                    trello.addCard(homework.title, '', list[0].id)
+                        .then(newcard => {
+                            trello.addLabelToCard(newcard.id, config.trello.label);
+                            trello.addDueDateToCard(newcard.id, homework.deadline);
+                        });
+                }
+            } else {
+                card = card[0];
+                if (card.due != homework.deadline.toISOString()) {
+                    logger.info(`Trello: Update due "${homework.title}"`)
+                    trello.updateCard(card.id, 'due', homework.deadline);
+                }
+                if (homework.submitted) {
+                    logger.info(`Trello: Update dueComplete "${homework.title}"`)
+                    trello.updateCard(card.id, 'dueComplete', true);
+                    trello.updateCard(card.id, 'closed', true);
+                }
+            }
+        });
+    } catch (err) { 
+        logger.error(err); 
+        throw TRELLOERROR;
+    }
 }
 
 const TIMEOUT = Symbol("Timeout");
@@ -311,6 +318,7 @@ async function getCourseList(semester) {
             let nowdata = [];
             let tasks = [];
             nowTimestamp = new Date();
+
             // logger.debug('Getting course list...');
             const courses = await getCourseList(config.semester);
             for (let course of courses) {
@@ -323,19 +331,6 @@ async function getCourseList(semester) {
 
                     await TrelloHomeworks(course.name, course.homeworks);
 
-                    const coursePredata = findCourse(predata, course.id);
-                    if (coursePredata != null) {
-                        compareFiles(course.name, course.files, coursePredata.files);
-                        // compareDiscussions(course.discussions, coursePredata.discussions);
-                        compareNotifications(course.name, course.notifications, coursePredata.notifications);
-                        compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
-                        // compareQuestions(course.questions, coursePredata.questions);
-                    } else {
-                        logger.info(`New course: <${course.name}>`);
-                        bot.telegram.sendMessage(config.channel, `新课程：「${reMarkdown(course.name)}」`).then(() => {}, function(error) { 
-                            logger.error('New course: sendMessage FAIL');
-                        });
-                    }
                     await new Promise((resolve => {
                         nowdata.push(course);
                         // logger.debug(`Course <${course.name}> finished.`);
@@ -343,11 +338,27 @@ async function getCourseList(semester) {
                     }));
                 })());
             };
-
             await Promise.race([
                 Promise.all(tasks),
                 new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 120 * 1000))
             ]);
+            // logger.debug('Got all data.');
+
+            for (let course of nowdata) {
+                const coursePredata = findCourse(predata, course.id);
+                if (coursePredata != null) {
+                    compareFiles(course.name, course.files, coursePredata.files);
+                    // compareDiscussions(course.discussions, coursePredata.discussions);
+                    compareNotifications(course.name, course.notifications, coursePredata.notifications);
+                    compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
+                    // compareQuestions(course.questions, coursePredata.questions);
+                } else {
+                    logger.info(`New course: <${course.name}>`);
+                    bot.telegram.sendMessage(config.channel, `新课程：「${reMarkdown(course.name)}」`).then(() => {}, function(error) { 
+                        logger.error('New course: sendMessage FAIL');
+                    });
+                }
+            }
 
             fs.writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
             predata = nowdata;
@@ -357,7 +368,7 @@ async function getCourseList(semester) {
             if (err === TIMEOUT) {
                 logger.error('Timeout.');
                 continue;
-            } else {
+            } else if (err !== TRELLOERROR) {
                 logger.error(err);
                 while (true) {
                     try {
