@@ -461,7 +461,10 @@ async function sortList(listID) {
 (async () => {
     while (true) {
         try {
-            if (global.gc) {global.gc();}
+            if (global.gc) {
+                global.gc();
+                logger.info('global.gc()');
+            }
         } catch (e) {
             console.log("`nodejs --expose-gc index.js`");
         }
