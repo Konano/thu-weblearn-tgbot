@@ -457,3 +457,14 @@ async function sortList(listID) {
         await delay(60 * 1000);
     }
 })();
+
+(async () => {
+    while (true) {
+        try {
+            if (global.gc) {global.gc();}
+        } catch (e) {
+            console.log("`nodejs --expose-gc index.js`");
+        }
+        await delay(3600 * 1000);
+    }
+})();
