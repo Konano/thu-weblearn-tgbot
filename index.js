@@ -412,7 +412,11 @@ async function sortList(listID) {
             // console.log(cardsList[i].pos, _pos[i])
             trello.updateCard(cardsList[i].id, 'pos', _pos[i]);
         }
-        due = cardsList[cardsList.length - 1].due;
+        try {
+            due = cardsList[cardsList.length - 1].due;
+        } catch (_) {
+            due = null;
+        }
     });
     return due;
 }
@@ -452,6 +456,7 @@ async function sortList(listID) {
             }
             logger.debug('Stop Trello sorting');
         } catch (err) {
+            logger.error(err);
             logger.error('Error in Trello sorting');
         }
         await delay(60 * 1000);
