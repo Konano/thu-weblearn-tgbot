@@ -292,7 +292,10 @@ async function getCourseList(semester) {
     } catch (err) {
         logger.error(err);
         let tasks = [];
-        const courses = await helper.getCourseList(config.semester);
+        let courses = [];
+        for (let semester of config.semesters) {
+            courses = courses.concat(await helper.getCourseList(semester));
+        }
         for (let course of courses) {
             tasks.push((async () => {
                 course.files = await helper.getFileList(course.id);
@@ -320,7 +323,12 @@ async function getCourseList(semester) {
             nowTimestamp = new Date();
 
             // logger.debug('Getting course list...');
-            const courses = await getCourseList(config.semester);
+            let courses = [];
+            for (let semester of config.semesters) {
+                courses = courses.concat(await helper.getCourseList(semester));
+            }
+            // logger.debug('Got course list.');
+            // logger.debug(courses);
             for (let course of courses) {
                 tasks.push((async () => {
                     course.files = await helper.getFileList(course.id);
@@ -329,7 +337,9 @@ async function getCourseList(semester) {
                     course.homeworks = await helper.getHomeworkList(course.id);
                     // course.questions = await helper.getAnsweredQuestionList(course.id);
 
+                    // logger.debug('TrelloHomeworks');
                     await TrelloHomeworks(course.name, course.homeworks);
+                    // logger.debug('TrelloHomeworks end');
 
                     await new Promise((resolve => {
                         nowdata.push(course);
