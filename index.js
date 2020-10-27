@@ -37,7 +37,7 @@ bot.catch((err, ctx) => {
 })
 // bot.launch()
 
-let helper = new thuLearnLib.Learn2018Helper();
+const helper = new thuLearnLib.Learn2018Helper({provider: () => { return { username: config.user.name, password: config.user.pwd }; }});
 
 async function delay(ms) {
     return await new Promise(resolve => setTimeout(resolve, ms));

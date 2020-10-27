@@ -235,10 +235,10 @@ is-ip@^1.0.0:
   dependencies:
     ip-regex "^1.0.0"
 
-js-base64@^3.4.5:
-  version "3.5.2"
-  resolved "https://registry.yarnpkg.com/js-base64/-/js-base64-3.5.2.tgz#3cc800e4f10812b55fb5ec53e7cabaef35dc6d3c"
-  integrity sha512-VG2qfvV5rEQIVxq9UmAVyWIaOdZGt9M16BLu8vFkyWyhv709Hyg4nKUb5T+Ru+HmAr9RHdF+kQDKAhbJlcdKeQ==
+js-base64@^2.5.1:
+  version "2.6.4"
+  resolved "https://registry.yarnpkg.com/js-base64/-/js-base64-2.6.4.tgz#f4e686c5de1ea1f867dbcad3d46d969428df98c4"
+  integrity sha512-pZe//GGmwJndub7ZghVHz7vjb2LgC1m8B07Au3eYqeqv9emhESByMXxaEgkUkEqJe87oBbSniGYoQNIBklc7IQ==
 
 jsbn@1.1.0:
   version "1.1.0"
@@ -437,17 +437,17 @@ telegram-typings@^3.6.0:
   resolved "https://registry.yarnpkg.com/telegram-typings/-/telegram-typings-3.6.1.tgz#1288d547f8694b61f1c01c2993e295f3114d9e25"
   integrity sha512-njVv1EAhIZnmQVLocZEADYUyqA1WIXuVcDYlsp+mXua/XB0pxx+PKtMSPeZ/EE4wPWTw9h/hA9ASTT6yQelkiw==
 
-thu-learn-lib@^2.3.2:
-  version "2.3.2"
-  resolved "https://registry.yarnpkg.com/thu-learn-lib/-/thu-learn-lib-2.3.2.tgz#2331ff5f092c01c8e6f3cf2f7b56967e3ede5674"
-  integrity sha512-YkFwVAIEox8fA/ZSl6Z27W+Ppy+uk9gC08HEX1wMzzaZo4Ma1T93NsZMRC9Clex/Wi+TpDIhgQPfq3W4y4Rfhw==
+thu-learn-lib@1.2.2:
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/thu-learn-lib/-/thu-learn-lib-1.2.2.tgz#d089c3f505af9cfe9831a11275313c01735b72c6"
+  integrity sha512-xmTSSGPFN2yenaIUDOWQ2uFRAjx+E6+d8H6BHvxIqdhnz0M8RW6r+Ru2D2h5zbydTZhixCHm8NrQZoI9xeh+dA==
   dependencies:
     cheerio "^1.0.0-rc.2"
     cross-fetch "^3.0.1"
     entities "^2.0.0"
     es6-denodeify "^0.1.5"
     form-data "^3.0.0"
-    js-base64 "^3.4.5"
+    js-base64 "^2.5.1"
     real-isomorphic-fetch "^3.0.0"
 
 tough-cookie-no-native@^2.4.1:
