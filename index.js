@@ -10,11 +10,12 @@ const log4js = require('log4js');
 log4js.configure({
     appenders: { 
         console: { type: 'console' },
-        logfile: { type: 'file', filename: 'runtime.log' },
-        fileFilter: { type: 'logLevelFilter', level: 'info', appender: 'logfile' }
+        logfile: { type: 'file', filename: 'runtime.log', maxLogSize: 1024 * 1024 * 32 },
+        consoleFilter: { type: 'logLevelFilter', level: 'info', appender: 'console' },
+        fileFilter: { type: 'logLevelFilter', level: 'debug', appender: 'logfile' }
     },
     categories: { 
-        default: { appenders: ['console', 'fileFilter'], level: 'debug' }
+        default: { appenders: ['consoleFilter', 'fileFilter'], level: 'debug' }
     }
 });
 const logger = log4js.getLogger('default');
@@ -67,7 +68,7 @@ function reMarkdown(str) {
 
 function compareFiles(courseName, nowdata, predata) {
     nowdata.forEach(file => {
-        if (predata.filter(x => { return file.id == x.id }).length == 0) {
+        if (predata.filter(x => { return file.id == x.id }).length == 0 && nowTimestamp - file.uploadTime < Date2ms(3, 0)) {
             logger.info(`New file: <${courseName}> ${file.title}`);
             bot.telegram.sendMessage(config.channel, 
                 `「${reMarkdown(courseName)}」发布了新的文件：` + 
@@ -178,7 +179,7 @@ function compareHomeworks(courseName, nowdata, predata) {
 function compareNotifications(courseName, nowdata, predata) {
     try {
         nowdata.forEach(notification => {
-            if (predata.filter(x => { return notification.id == x.id }).length == 0) {
+            if (predata.filter(x => { return notification.id == x.id }).length == 0 && nowTimestamp - notification.publishTime < Date2ms(3, 0)) {
                 logger.info(`New nofitication: <${courseName}> ${notification.title}`);
                 bot.telegram.sendMessage(config.channel, 
                     `「${reMarkdown(courseName)}」发布了新的公告：` + 
@@ -336,6 +337,8 @@ async function getCourseList(semester) {
                     course.notifications = await helper.getNotificationList(course.id);
                     course.homeworks = await helper.getHomeworkList(course.id);
                     // course.questions = await helper.getAnsweredQuestionList(course.id);
+
+                    logger.debug(`Course <${course.name}>: files ${course.files.length} notifications ${course.notifications.length} homeworks ${course.homeworks.length}`);
 
                     // logger.debug('TrelloHomeworks');
                     await TrelloHomeworks(course.name, course.homeworks);
