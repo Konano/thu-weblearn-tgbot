@@ -5,16 +5,17 @@ const SocksAgent = require('socks5-https-client/lib/Agent');
 const thuLearnLib = require('thu-learn-lib');
 const moment = require('moment');
 const Trello = require('trello');
+const http = require('http');
 
 const log4js = require('log4js');
 log4js.configure({
-    appenders: { 
+    appenders: {
         console: { type: 'console' },
-        logfile: { type: 'file', filename: 'runtime.log', maxLogSize: 1024 * 1024 * 32 },
+        logfile: { type: 'file', filename: 'log/runtime.log', maxLogSize: 1024 * 128, backups: 10 },
         consoleFilter: { type: 'logLevelFilter', level: 'info', appender: 'console' },
         fileFilter: { type: 'logLevelFilter', level: 'debug', appender: 'logfile' }
     },
-    categories: { 
+    categories: {
         default: { appenders: ['consoleFilter', 'fileFilter'], level: 'debug' }
     }
 });
@@ -377,6 +378,7 @@ async function getCourseList(semester) {
             predata = nowdata;
             preTimestamp = nowTimestamp;
             logger.debug('Checked.');
+            http.get('http://alert.nano.ac/heartbeat/leaner').setTimeout(20 * 1000, function(){})
         } catch (err) {
             if (err === TIMEOUT) {
                 logger.error('Timeout.');
@@ -434,47 +436,47 @@ async function sortList(listID) {
     return due;
 }
 
-(async () => {
-    while (true) {
-        try {
-            logger.debug('Start Trello sorting...');
-            let TrelloLists = [];
-            while (true) {
-                try {
-                    await Promise.race([
-                        trello.getListsOnBoardByFilter(config.trello.board, 'open').then(
-                            lists => lists.forEach(list => TrelloLists.push(list))
-                        ),
-                        new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 60 * 1000))
-                    ]);
-                    break;
-                } catch (_) { logger.error('getListsOnBoard timeout.'); }
-                await delay(60 * 1000);
-            }
-            TrelloLists = await Promise.all(TrelloLists.map(async list => {
-                list.due = await sortList(list.id);
-                return list;
-            }));
-            let _pos = TrelloLists.map(x => x.pos).sort((a, b) => a - b);
-            TrelloLists.sort((a, b) => {
-                if (a.due == null && b.due == null) {
-                    return a.pos - b.pos
-                } else if (a.due == null || b.due == null) {
-                    return (a.due == null ? 1 : -1);
-                } else 
-                return (a.due > b.due ? 1 : a.due < b.due ? -1 : a.pos - b.pos)
-            });
-            for (let i = 0; i < TrelloLists.length; i++) if (TrelloLists[i].pos != _pos[i]) {
-                trello.makeRequest('put', `/1/lists/${TrelloLists[i].id}/pos`, { value: _pos[i] });
-            }
-            logger.debug('Stop Trello sorting');
-        } catch (err) {
-            logger.error(err);
-            logger.error('Error in Trello sorting');
-        }
-        await delay(60 * 1000);
-    }
-})();
+// (async () => {
+//     while (true) {
+//         try {
+//             logger.debug('Start Trello sorting...');
+//             let TrelloLists = [];
+//             while (true) {
+//                 try {
+//                     await Promise.race([
+//                         trello.getListsOnBoardByFilter(config.trello.board, 'open').then(
+//                             lists => lists.forEach(list => TrelloLists.push(list))
+//                         ),
+//                         new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 60 * 1000))
+//                     ]);
+//                     break;
+//                 } catch (_) { logger.error('getListsOnBoard timeout.'); }
+//                 await delay(60 * 1000);
+//             }
+//             TrelloLists = await Promise.all(TrelloLists.map(async list => {
+//                 list.due = await sortList(list.id);
+//                 return list;
+//             }));
+//             let _pos = TrelloLists.map(x => x.pos).sort((a, b) => a - b);
+//             TrelloLists.sort((a, b) => {
+//                 if (a.due == null && b.due == null) {
+//                     return a.pos - b.pos
+//                 } else if (a.due == null || b.due == null) {
+//                     return (a.due == null ? 1 : -1);
+//                 } else
+//                 return (a.due > b.due ? 1 : a.due < b.due ? -1 : a.pos - b.pos)
+//             });
+//             for (let i = 0; i < TrelloLists.length; i++) if (TrelloLists[i].pos != _pos[i]) {
+//                 trello.makeRequest('put', `/1/lists/${TrelloLists[i].id}/pos`, { value: _pos[i] });
+//             }
+//             logger.debug('Stop Trello sorting');
+//         } catch (err) {
+//             logger.error(err);
+//             logger.error('Error in Trello sorting');
+//         }
+//         await delay(60 * 1000);
+//     }
+// })();
 
 (async () => {
     while (true) {
