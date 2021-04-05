@@ -39,7 +39,7 @@ bot.catch((err, ctx) => {
 })
 // bot.launch()
 
-const helper = new thuLearnLib.Learn2018Helper({provider: () => { return { username: config.user.name, password: config.user.pwd }; }});
+const helper = new thuLearnLib.Learn2018Helper({ provider: () => { return { username: config.user.name, password: config.user.pwd }; } });
 
 async function delay(ms) {
     return await new Promise(resolve => setTimeout(resolve, ms));
@@ -71,8 +71,8 @@ function compareFiles(courseName, nowdata, predata) {
     nowdata.forEach(file => {
         if (predata.filter(x => { return file.id == x.id }).length == 0 && nowTimestamp - file.uploadTime < Date2ms(3, 0)) {
             logger.info(`New file: <${courseName}> ${file.title}`);
-            bot.telegram.sendMessage(config.channel, 
-                `「${reMarkdown(courseName)}」发布了新的文件：` + 
+            bot.telegram.sendMessage(config.channel,
+                `「${reMarkdown(courseName)}」发布了新的文件：` +
                 `[${reMarkdown(file.title)}](${file.downloadUrl.replace(/learn2018/, 'learn')})`,
                 { parse_mode : 'Markdown' })
             .then(() => {}, function(error) { 
@@ -87,7 +87,7 @@ let nowTimestamp = new Date();
 let Date2ms = (day, hour) => (day * 24 + hour) * 60 * 60 * 1000;
 
 function reminder(deadline) {
-    return (deadline < nowTimestamp) ? null :   
+    return (deadline < nowTimestamp) ? null :
         (deadline - nowTimestamp < Date2ms(3, 0) && deadline - preTimestamp > Date2ms(3, 0)) ? ['*3 天*', '3 days'] :
         (deadline - nowTimestamp < Date2ms(1, 0) && deadline - preTimestamp > Date2ms(1, 0)) ? ['*1 天*', '1 day'] :
         (deadline - nowTimestamp < Date2ms(0, 6) && deadline - preTimestamp > Date2ms(0, 6)) ? ['*6 小时*', '6 hours'] :
@@ -96,7 +96,7 @@ function reminder(deadline) {
 }
 
 function overdue(deadline) {
-    return deadline < nowTimestamp && deadline > preTimestamp; 
+    return deadline < nowTimestamp && deadline > preTimestamp;
 }
 
 function compareHomeworks(courseName, nowdata, predata) {
@@ -104,9 +104,9 @@ function compareHomeworks(courseName, nowdata, predata) {
         const pre = predata.filter(x => { return homework.id == x.id });
         if (pre.length == 0) {
             logger.info(`New homework: <${courseName}> ${homework.title}`);
-            bot.telegram.sendMessage(config.channel, 
-                `「${reMarkdown(courseName)}」布置了新的作业：` + 
-                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
+            bot.telegram.sendMessage(config.channel,
+                `「${reMarkdown(courseName)}」布置了新的作业：` +
+                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
                 `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
                 { parse_mode : 'Markdown' })
             .then(() => {}, function(error) { 
@@ -117,9 +117,9 @@ function compareHomeworks(courseName, nowdata, predata) {
         let ret;
         if (homework.deadline.toISOString() != (typeof pre[0].deadline == 'string' ? pre[0].deadline : pre[0].deadline.toISOString())) {
             logger.info(`Homework deadline modified: <${courseName}> ${homework.title}`);
-            bot.telegram.sendMessage(config.channel, 
-                `截止时间变更：「${reMarkdown(courseName)}」` + 
-                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
+            bot.telegram.sendMessage(config.channel,
+                `截止时间变更：「${reMarkdown(courseName)}」` +
+                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
                 `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
                 { parse_mode : 'Markdown' })
             .then(() => {}, function(error) { 
@@ -127,10 +127,10 @@ function compareHomeworks(courseName, nowdata, predata) {
             });
         } else if (homework.submitted == false && (ret = reminder(homework.deadline)) != null) {
             logger.info(`Homework deadline ${ret[1]} left: <${courseName}> ${homework.title}`);
-            bot.telegram.sendMessage(config.channel, 
-                `作业还剩 ${ret[0]}！\n` + 
+            bot.telegram.sendMessage(config.channel,
+                `作业还剩 ${ret[0]}！\n` +
                 `「${reMarkdown(courseName)}」` +
-                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
+                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
                 `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
                 { parse_mode : 'Markdown' })
             .then(() => {}, function(error) { 
@@ -138,10 +138,10 @@ function compareHomeworks(courseName, nowdata, predata) {
             });
         } else if (homework.submitted == false && overdue(homework.deadline)) {
             logger.info(`Homework deadline overdue: <${courseName}> ${homework.title}`);
-            bot.telegram.sendMessage(config.channel, 
-                `作业截止！\n` + 
+            bot.telegram.sendMessage(config.channel,
+                `作业截止！\n` +
                 `「${reMarkdown(courseName)}」` +
-                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` + 
+                `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
                 `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
                 { parse_mode : 'Markdown' })
             .then(() => {}, function(error) { 
@@ -150,19 +150,19 @@ function compareHomeworks(courseName, nowdata, predata) {
         }
         if (homework.submitted && !pre[0].submitted) {
             logger.info(`Homework submited: <${courseName}> ${homework.title}`);
-            bot.telegram.sendMessage(config.channel, 
-                `已提交作业：「${reMarkdown(courseName)}」` + 
+            bot.telegram.sendMessage(config.channel,
+                `已提交作业：「${reMarkdown(courseName)}」` +
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n`,
                 { parse_mode : 'Markdown' })
             .then(() => {}, function(error) { 
                 logger.error('Homework submited: sendMessage FAIL');
             });
         }
-        if (homework.gradeTime && (pre[0].gradeTime == undefined || 
-                homework.gradeTime.toISOString() != (typeof pre[0].gradeTime == 'string' ? pre[0].gradeTime : pre[0].gradeTime.toISOString()))) {
+        if (homework.gradeTime && (pre[0].gradeTime == undefined ||
+            homework.gradeTime.toISOString() != (typeof pre[0].gradeTime == 'string' ? pre[0].gradeTime : pre[0].gradeTime.toISOString()))) {
             logger.info(`Homework scored: <${courseName}> ${homework.title}`);
-            let content = 
-                `作业有新的评分：「${reMarkdown(courseName)}」` + 
+            let content =
+                `作业有新的评分：「${reMarkdown(courseName)}」` +
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n`;
             if (homework.gradeLevel)
                 content += `分数等级：${reMarkdown(homework.gradeLevel)}\n`
@@ -170,7 +170,7 @@ function compareHomeworks(courseName, nowdata, predata) {
                 content += `分数：${reMarkdown(homework.grade)}\n`
             if (homework.gradeContent)
                 content += `====================\n` + `${reMarkdown(homework.gradeContent)}`
-            bot.telegram.sendMessage(config.channel, content, { parse_mode : 'Markdown' }).then(() => {}, function(error) { 
+            bot.telegram.sendMessage(config.channel, content, { parse_mode: 'Markdown' }).then(() => {}, function (error) {
                 logger.error('Homework scored: sendMessage FAIL');
             });
         }
@@ -182,10 +182,10 @@ function compareNotifications(courseName, nowdata, predata) {
         nowdata.forEach(notification => {
             if (predata.filter(x => { return notification.id == x.id }).length == 0 && nowTimestamp - notification.publishTime < Date2ms(3, 0)) {
                 logger.info(`New nofitication: <${courseName}> ${notification.title}`);
-                bot.telegram.sendMessage(config.channel, 
-                    `「${reMarkdown(courseName)}」发布了新的公告：` + 
+                bot.telegram.sendMessage(config.channel,
+                    `「${reMarkdown(courseName)}」发布了新的公告：` +
                     `[${reMarkdown(notification.title)}](${notification.url.replace(/learn2018/, 'learn')})\n` +
-                    `====================\n` + 
+                    `====================\n` +
                     reMarkdown(reBlank(htmlToText.fromString(notification.content))),
                     { parse_mode : 'Markdown' })
                 .then(() => {}, function(error) { 
@@ -255,8 +255,8 @@ async function TrelloHomeworks(courseName, homeworks) {
                 }
             }
         });
-    } catch (err) { 
-        logger.error(err); 
+    } catch (err) {
+        logger.error(err);
         throw TRELLOERROR;
     }
 }
@@ -402,6 +402,7 @@ async function getCourseList(semester) {
     }
 })();
 
+/*
 function rankCard(card) {
     if (card.due == null) return 0;
     if (card.dueComplete) return 1;
@@ -436,47 +437,48 @@ async function sortList(listID) {
     return due;
 }
 
-// (async () => {
-//     while (true) {
-//         try {
-//             logger.debug('Start Trello sorting...');
-//             let TrelloLists = [];
-//             while (true) {
-//                 try {
-//                     await Promise.race([
-//                         trello.getListsOnBoardByFilter(config.trello.board, 'open').then(
-//                             lists => lists.forEach(list => TrelloLists.push(list))
-//                         ),
-//                         new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 60 * 1000))
-//                     ]);
-//                     break;
-//                 } catch (_) { logger.error('getListsOnBoard timeout.'); }
-//                 await delay(60 * 1000);
-//             }
-//             TrelloLists = await Promise.all(TrelloLists.map(async list => {
-//                 list.due = await sortList(list.id);
-//                 return list;
-//             }));
-//             let _pos = TrelloLists.map(x => x.pos).sort((a, b) => a - b);
-//             TrelloLists.sort((a, b) => {
-//                 if (a.due == null && b.due == null) {
-//                     return a.pos - b.pos
-//                 } else if (a.due == null || b.due == null) {
-//                     return (a.due == null ? 1 : -1);
-//                 } else
-//                 return (a.due > b.due ? 1 : a.due < b.due ? -1 : a.pos - b.pos)
-//             });
-//             for (let i = 0; i < TrelloLists.length; i++) if (TrelloLists[i].pos != _pos[i]) {
-//                 trello.makeRequest('put', `/1/lists/${TrelloLists[i].id}/pos`, { value: _pos[i] });
-//             }
-//             logger.debug('Stop Trello sorting');
-//         } catch (err) {
-//             logger.error(err);
-//             logger.error('Error in Trello sorting');
-//         }
-//         await delay(60 * 1000);
-//     }
-// })();
+(async () => {
+    while (true) {
+        try {
+            logger.debug('Start Trello sorting...');
+            let TrelloLists = [];
+            while (true) {
+                try {
+                    await Promise.race([
+                        trello.getListsOnBoardByFilter(config.trello.board, 'open').then(
+                            lists => lists.forEach(list => TrelloLists.push(list))
+                        ),
+                        new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 60 * 1000))
+                    ]);
+                    break;
+                } catch (_) { logger.error('getListsOnBoard timeout.'); }
+                await delay(60 * 1000);
+            }
+            TrelloLists = await Promise.all(TrelloLists.map(async list => {
+                list.due = await sortList(list.id);
+                return list;
+            }));
+            let _pos = TrelloLists.map(x => x.pos).sort((a, b) => a - b);
+            TrelloLists.sort((a, b) => {
+                if (a.due == null && b.due == null) {
+                    return a.pos - b.pos
+                } else if (a.due == null || b.due == null) {
+                    return (a.due == null ? 1 : -1);
+                } else
+                return (a.due > b.due ? 1 : a.due < b.due ? -1 : a.pos - b.pos)
+            });
+            for (let i = 0; i < TrelloLists.length; i++) if (TrelloLists[i].pos != _pos[i]) {
+                trello.makeRequest('put', `/1/lists/${TrelloLists[i].id}/pos`, { value: _pos[i] });
+            }
+            logger.debug('Stop Trello sorting');
+        } catch (err) {
+            logger.error(err);
+            logger.error('Error in Trello sorting');
+        }
+        await delay(60 * 1000);
+    }
+})();
+*/
 
 (async () => {
     while (true) {
