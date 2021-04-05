@@ -1,4 +1,4 @@
-const Telegraf = require('telegraf');
+// const Telegraf = require('telegraf');
 const fs = require('fs');
 const htmlToText = require('html-to-text');
 const SocksAgent = require('socks5-https-client/lib/Agent');
@@ -6,6 +6,7 @@ const thuLearnLib = require('thu-learn-lib');
 const moment = require('moment');
 const Trello = require('trello');
 const http = require('http');
+const https = require('https');
 
 const log4js = require('log4js');
 log4js.configure({
@@ -23,6 +24,40 @@ const logger = log4js.getLogger('default');
 
 var config = require('./config');
 
+function sendMessage(msg, errmsg) {
+    const data = JSON.stringify({
+        chat_id: config.channel,
+        text: msg,
+        parse_mode: 'Markdown'
+    });
+    const options = {
+        hostname: config.apiserver,
+        port: 443,
+        path: `/bot${config.token}/sendMessage`,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        timeout: 5000
+    };
+    const req = https.request(options, res => {
+        logger.debug(`statusCode: ${res.statusCode}`);
+        res.on('data', d => { logger.debug(d) })
+    });
+    req.on('error', error => {
+        logger.error(errmsg);
+        logger.error(error);
+    });
+    req.on('timeout', () => {
+        logger.error(errmsg);
+        logger.error('TIMEOUT');
+        req.destroy();
+    });
+    req.write(data);
+    req.end();
+}
+
+/*
 let bot;
 if (config.proxy.status) {
     const socksAgent = new SocksAgent({
@@ -37,7 +72,8 @@ if (config.proxy.status) {
 bot.catch((err, ctx) => {
     logger.error(`Ooops, encountered an error for ${ctx.updateType}`, err)
 })
-// bot.launch()
+bot.launch()
+*/
 
 const helper = new thuLearnLib.Learn2018Helper({ provider: () => { return { username: config.user.name, password: config.user.pwd }; } });
 
@@ -71,13 +107,10 @@ function compareFiles(courseName, nowdata, predata) {
     nowdata.forEach(file => {
         if (predata.filter(x => { return file.id == x.id }).length == 0 && nowTimestamp - file.uploadTime < Date2ms(3, 0)) {
             logger.info(`New file: <${courseName}> ${file.title}`);
-            bot.telegram.sendMessage(config.channel,
+            sendMessage(
                 `「${reMarkdown(courseName)}」发布了新的文件：` +
                 `[${reMarkdown(file.title)}](${file.downloadUrl.replace(/learn2018/, 'learn')})`,
-                { parse_mode : 'Markdown' })
-            .then(() => {}, function(error) { 
-                logger.error('New file: sendMessage FAIL');
-            });
+                'New file: sendMessage FAIL')
         }
     });
 }
@@ -89,10 +122,10 @@ let Date2ms = (day, hour) => (day * 24 + hour) * 60 * 60 * 1000;
 function reminder(deadline) {
     return (deadline < nowTimestamp) ? null :
         (deadline - nowTimestamp < Date2ms(3, 0) && deadline - preTimestamp > Date2ms(3, 0)) ? ['*3 天*', '3 days'] :
-        (deadline - nowTimestamp < Date2ms(1, 0) && deadline - preTimestamp > Date2ms(1, 0)) ? ['*1 天*', '1 day'] :
-        (deadline - nowTimestamp < Date2ms(0, 6) && deadline - preTimestamp > Date2ms(0, 6)) ? ['*6 小时*', '6 hours'] :
-        (deadline - nowTimestamp < Date2ms(0, 1) && deadline - preTimestamp > Date2ms(0, 1)) ? ['*1 小时*', '1 hour'] :
-        null;
+            (deadline - nowTimestamp < Date2ms(1, 0) && deadline - preTimestamp > Date2ms(1, 0)) ? ['*1 天*', '1 day'] :
+                (deadline - nowTimestamp < Date2ms(0, 6) && deadline - preTimestamp > Date2ms(0, 6)) ? ['*6 小时*', '6 hours'] :
+                    (deadline - nowTimestamp < Date2ms(0, 1) && deadline - preTimestamp > Date2ms(0, 1)) ? ['*1 小时*', '1 hour'] :
+                        null;
 }
 
 function overdue(deadline) {
@@ -104,59 +137,44 @@ function compareHomeworks(courseName, nowdata, predata) {
         const pre = predata.filter(x => { return homework.id == x.id });
         if (pre.length == 0) {
             logger.info(`New homework: <${courseName}> ${homework.title}`);
-            bot.telegram.sendMessage(config.channel,
+            sendMessage(
                 `「${reMarkdown(courseName)}」布置了新的作业：` +
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
                 `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
-                { parse_mode : 'Markdown' })
-            .then(() => {}, function(error) { 
-                logger.error('New homework: sendMessage FAIL');
-            });
+                'New homework: sendMessage FAIL');
             return;
         }
         let ret;
         if (homework.deadline.toISOString() != (typeof pre[0].deadline == 'string' ? pre[0].deadline : pre[0].deadline.toISOString())) {
             logger.info(`Homework deadline modified: <${courseName}> ${homework.title}`);
-            bot.telegram.sendMessage(config.channel,
+            sendMessage(
                 `截止时间变更：「${reMarkdown(courseName)}」` +
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
                 `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
-                { parse_mode : 'Markdown' })
-            .then(() => {}, function(error) { 
-                logger.error('Homework deadline modified: sendMessage FAIL');
-            });
+                'Homework deadline modified: sendMessage FAIL');
         } else if (homework.submitted == false && (ret = reminder(homework.deadline)) != null) {
             logger.info(`Homework deadline ${ret[1]} left: <${courseName}> ${homework.title}`);
-            bot.telegram.sendMessage(config.channel,
+            sendMessage(
                 `作业还剩 ${ret[0]}！\n` +
                 `「${reMarkdown(courseName)}」` +
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
                 `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
-                { parse_mode : 'Markdown' })
-            .then(() => {}, function(error) { 
-                logger.error(`Homework deadline ${ret[1]} left: sendMessage FAIL`);
-            });
+                `Homework deadline ${ret[1]} left: sendMessage FAIL`);
         } else if (homework.submitted == false && overdue(homework.deadline)) {
             logger.info(`Homework deadline overdue: <${courseName}> ${homework.title}`);
-            bot.telegram.sendMessage(config.channel,
+            sendMessage(
                 `作业截止！\n` +
                 `「${reMarkdown(courseName)}」` +
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
                 `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
-                { parse_mode : 'Markdown' })
-            .then(() => {}, function(error) { 
-                logger.error(`Homework deadline overdue: sendMessage FAIL`);
-            });
+                `Homework deadline overdue: sendMessage FAIL`);
         }
         if (homework.submitted && !pre[0].submitted) {
             logger.info(`Homework submited: <${courseName}> ${homework.title}`);
-            bot.telegram.sendMessage(config.channel,
+            sendMessage(
                 `已提交作业：「${reMarkdown(courseName)}」` +
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n`,
-                { parse_mode : 'Markdown' })
-            .then(() => {}, function(error) { 
-                logger.error('Homework submited: sendMessage FAIL');
-            });
+                'Homework submited: sendMessage FAIL');
         }
         if (homework.gradeTime && (pre[0].gradeTime == undefined ||
             homework.gradeTime.toISOString() != (typeof pre[0].gradeTime == 'string' ? pre[0].gradeTime : pre[0].gradeTime.toISOString()))) {
@@ -170,9 +188,7 @@ function compareHomeworks(courseName, nowdata, predata) {
                 content += `分数：${reMarkdown(homework.grade)}\n`
             if (homework.gradeContent)
                 content += `====================\n` + `${reMarkdown(homework.gradeContent)}`
-            bot.telegram.sendMessage(config.channel, content, { parse_mode: 'Markdown' }).then(() => {}, function (error) {
-                logger.error('Homework scored: sendMessage FAIL');
-            });
+            sendMessage(content, 'Homework scored: sendMessage FAIL');
         }
     });
 }
@@ -182,15 +198,11 @@ function compareNotifications(courseName, nowdata, predata) {
         nowdata.forEach(notification => {
             if (predata.filter(x => { return notification.id == x.id }).length == 0 && nowTimestamp - notification.publishTime < Date2ms(3, 0)) {
                 logger.info(`New nofitication: <${courseName}> ${notification.title}`);
-                bot.telegram.sendMessage(config.channel,
+                sendMessage(
                     `「${reMarkdown(courseName)}」发布了新的公告：` +
                     `[${reMarkdown(notification.title)}](${notification.url.replace(/learn2018/, 'learn')})\n` +
                     `====================\n` +
-                    reMarkdown(reBlank(htmlToText.fromString(notification.content))),
-                    { parse_mode : 'Markdown' })
-                .then(() => {}, function(error) { 
-                    logger.error('New nofitication: sendMessage FAIL');
-                });
+                    'New nofitication: sendMessage FAIL');
             }
         });
     } catch (err) {
@@ -368,9 +380,7 @@ async function getCourseList(semester) {
                     // compareQuestions(course.questions, coursePredata.questions);
                 } else {
                     logger.info(`New course: <${course.name}>`);
-                    bot.telegram.sendMessage(config.channel, `新课程：「${reMarkdown(course.name)}」`).then(() => {}, function(error) { 
-                        logger.error('New course: sendMessage FAIL');
-                    });
+                    sendMessage(`新课程：「${reMarkdown(course.name)}」`, 'New course: sendMessage FAIL');
                 }
             }
 
@@ -378,7 +388,7 @@ async function getCourseList(semester) {
             predata = nowdata;
             preTimestamp = nowTimestamp;
             logger.debug('Checked.');
-            http.get('http://alert.nano.ac/heartbeat/leaner').setTimeout(20 * 1000, function(){})
+            http.get('http://alert.nano.ac/heartbeat/leaner').setTimeout(20 * 1000, function () { })
         } catch (err) {
             if (err === TIMEOUT) {
                 logger.error('Timeout.');
