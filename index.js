@@ -42,7 +42,7 @@ function sendMessage(msg, errmsg) {
     };
     const req = https.request(options, res => {
         logger.debug(`statusCode: ${res.statusCode}`);
-        res.on('data', d => { logger.debug(d) })
+        res.on('data', d => { logger.debug(d.toString()) })
     });
     req.on('error', error => {
         logger.error(errmsg);
