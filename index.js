@@ -25,36 +25,40 @@ const logger = log4js.getLogger('default');
 var config = require('./config');
 
 function sendMessage(msg, errmsg) {
-    const data = JSON.stringify({
-        chat_id: config.channel,
-        text: msg,
-        parse_mode: 'Markdown'
-    });
-    const options = {
-        hostname: config.apiserver,
-        port: 443,
-        path: `/bot${config.token}/sendMessage`,
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        timeout: 5000
-    };
-    const req = https.request(options, res => {
-        logger.debug(`statusCode: ${res.statusCode}`);
-        res.on('data', d => { logger.debug(d.toString()) })
-    });
-    req.on('error', error => {
-        logger.error(errmsg);
-        logger.error(error);
-    });
-    req.on('timeout', () => {
-        logger.error(errmsg);
-        logger.error('TIMEOUT');
-        req.destroy();
-    });
-    req.write(data);
-    req.end();
+    try {
+        const data = JSON.stringify({
+            chat_id: config.channel,
+            text: msg,
+            parse_mode: 'Markdown'
+        });
+        const options = {
+            hostname: config.apiserver,
+            port: 443,
+            path: `/bot${config.token}/sendMessage`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            timeout: 5000
+        };
+        const req = https.request(options, res => {
+            logger.debug(`statusCode: ${res.statusCode}`);
+            res.on('data', d => { logger.debug(d.toString()) })
+        });
+        req.on('error', error => {
+            logger.error(errmsg);
+            logger.error(error);
+        });
+        req.on('timeout', () => {
+            logger.error(errmsg);
+            logger.error('TIMEOUT');
+            req.destroy();
+        });
+        req.write(data);
+        req.end();
+    } catch (err) {
+        logger.error(err);
+    }
 }
 
 /*
@@ -110,7 +114,7 @@ function compareFiles(courseName, nowdata, predata) {
             sendMessage(
                 `「${reMarkdown(courseName)}」发布了新的文件：` +
                 `[${reMarkdown(file.title)}](${file.downloadUrl.replace(/learn2018/, 'learn')})`,
-                'New file: sendMessage FAIL')
+                'New file: sendMessage FAIL');
         }
     });
 }
