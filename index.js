@@ -45,14 +45,13 @@ function sendMessage(msg, errmsg) {
             logger.debug(`statusCode: ${res.statusCode}`);
             res.on('data', d => { logger.debug(d.toString()) })
         });
-        req.on('error', error => {
-            logger.error(errmsg);
-            logger.error(error);
-        });
         req.on('timeout', () => {
-            logger.error(errmsg);
             logger.error('TIMEOUT');
             req.destroy();
+        });
+        req.on('error', error => {
+            logger.error(errmsg);
+            logger.debug(error);
         });
         req.write(data);
         req.end();
