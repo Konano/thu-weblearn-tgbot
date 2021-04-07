@@ -7,6 +7,7 @@ const moment = require('moment');
 const Trello = require('trello');
 const http = require('http');
 const https = require('https');
+const querystring = require('querystring');
 
 const log4js = require('log4js');
 log4js.configure({
@@ -25,39 +26,34 @@ const logger = log4js.getLogger('default');
 var config = require('./config');
 
 function sendMessage(msg, errmsg) {
+    logger.debug('sendMessage Start');
     try {
-        const data = JSON.stringify({
+        const params = {
             chat_id: config.channel,
             text: msg,
             parse_mode: 'Markdown'
-        });
+        };
         const options = {
             hostname: config.apiserver,
             port: 443,
-            path: `/bot${config.token}/sendMessage`,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            timeout: 5000
+            path: `/bot${config.token}/sendMessage?${querystring.stringify(params)}`,
+            method: 'GET'
         };
-        const req = https.request(options, res => {
+        https.request(options, res => {
             logger.debug(`statusCode: ${res.statusCode}`);
             res.on('data', d => { logger.debug(d.toString()) })
-        });
-        req.on('timeout', () => {
-            logger.error('TIMEOUT');
-            req.destroy();
-        });
-        req.on('error', error => {
-            logger.error(errmsg);
+        }).on('error', error => {
+            logger.debug('request error');
             logger.debug(error);
+            logger.error(errmsg);
+            sendMessage(msg, errmsg);
+        }).end(() => {
+            logger.debug('request end');
         });
-        req.write(data);
-        req.end();
     } catch (err) {
         logger.error(err);
     }
+    logger.debug('sendMessage Return');
 }
 
 /*
@@ -391,7 +387,12 @@ async function getCourseList(semester) {
             predata = nowdata;
             preTimestamp = nowTimestamp;
             logger.debug('Checked.');
-            http.get('http://alert.nano.ac/heartbeat/leaner').setTimeout(20 * 1000, function () { })
+            http.get(config.heartbeat).on('error', error => {
+                logger.debug('alert error');
+                logger.debug(error);
+            }).end(() => {
+                logger.debug('alert end');
+            });
         } catch (err) {
             if (err === TIMEOUT) {
                 logger.error('Timeout.');
