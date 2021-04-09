@@ -201,6 +201,7 @@ function compareNotifications(courseName, nowdata, predata) {
                     `「${reMarkdown(courseName)}」发布了新的公告：` +
                     `[${reMarkdown(notification.title)}](${notification.url.replace(/learn2018/, 'learn')})\n` +
                     `====================\n` +
+                    reMarkdown(reBlank(htmlToText.fromString(notification.content))),
                     'New nofitication: sendMessage FAIL');
             }
         });
