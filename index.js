@@ -409,7 +409,10 @@ async function getCourseList(semester) {
                         ]);
                         logger.info('Relogin successful.');
                         break;
-                    } catch (err) { logger.error('Relogin timeout.'); }
+                    } catch (err) {
+                        logger.error('Relogin timeout.');
+                        await delay(10 * 1000);
+                    }
                 }
             }
         }
