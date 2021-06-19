@@ -7,9 +7,9 @@
 ```
 $ cp config.example.js config.js
 $ vim config.js
-$ ...
-$ yarn
-$ node index.js
+$ ... # 修改 config.js 配置文件
+$ yarn # 安装依赖
+$ node index.js # 运行
 ```
 
 ## Todo
