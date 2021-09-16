@@ -1,18 +1,13 @@
-var config = {
+export let config = {
+    debug: true,
     name: 'THULearnBot',
     token: '000000000:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-    owner: 'xxxxxxxxx',
-    channel: '@xxxxxx',
-    proxy: {
-        status: false,
-        host: '127.0.0.1',
-        port: '1080',
-    },
+    owner: '000000000',
+    channel: '-100000000000', // or '@xxxxxx'
+    apiproxy: 'tg.nano.ac', // or api.telegram.org
     user: {
         name: '',
         pwd: '',
     },
-    semester: '2019-2020-2',
+    semesters: ['2021-2022-1']
 };
-
-module.exports = config;
