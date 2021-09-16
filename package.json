@@ -1,21 +1,19 @@
 {
   "name": "thu-weblearn-tgbot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A telegram bot to monitor Tsinghua web learning and push new messages to users.",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Konano",
   "license": "MIT",
   "dependencies": {
-    "html-to-text": "^5.1.1",
+    "html-to-text": "^8.0.0",
     "log4js": "^6.3.0",
     "moment": "^2.29.1",
-    "socks5-https-client": "^1.2.1",
-    "telegraf": "^3.38.0",
-    "thu-learn-lib": "1.2.2",
-    "trello": "^0.10.0"
+    "thu-learn-lib": "2.5.3"
   },
   "devDependencies": {},
   "repository": "git+https://github.com/Konano/thu-weblearn-tgbot.git",
