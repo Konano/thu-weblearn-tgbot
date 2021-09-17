@@ -5,8 +5,11 @@ import moment from 'moment';
 import { get } from 'http';
 import { request } from 'https';
 import { stringify } from 'querystring';
+import { google } from 'googleapis';
+import { GaxiosError } from 'gaxios';
 import pkg from 'log4js';
 const { configure, getLogger } = pkg;
+
 import { config } from './config.js';
 
 configure({
@@ -55,12 +58,19 @@ function sendMessage(msg, errmsg) {
 
 const helper = new Learn2018Helper({ provider: () => { return { username: config.user.name, password: config.user.pwd }; } });
 
+google.options({
+    auth: new google.auth.GoogleAuth({
+        keyFile: config.calendar.keyFile,
+        scopes: ['https://www.googleapis.com/auth/calendar'],
+    })
+});
+
 async function delay(ms) {
     return await new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function findCourse(predata, courseID) {
-    var ret = null;
+    let ret = null;
     predata.forEach(x => { if (x.id == courseID) ret = x });
     return ret;
 }
@@ -85,10 +95,15 @@ function compareFiles(courseName, nowdata, predata) {
     nowdata.forEach(file => {
         if (predata.filter(x => { return file.id == x.id }).length == 0 && nowTimestamp - file.uploadTime < Date2ms(3, 0)) {
             logger.info(`New file: <${courseName}> ${file.title}`);
-            sendMessage(
+            let text =
                 `「${reMarkdown(courseName)}」发布了新的文件：` +
-                `[${reMarkdown(file.title)}](${file.downloadUrl.replace(/learn2018/, 'learn')})`,
-                'New file: sendMessage FAIL');
+                `[${reMarkdown(file.title)}](${file.downloadUrl.replace(/learn2018/, 'learn')})`;
+            if (file.description != "") {
+                text +=
+                    `\n====================\n` +
+                    reMarkdown(reBlank(htmlToText(file.description)));
+            }
+            sendMessage(text, 'New file: sendMessage FAIL');
         }
     });
 }
@@ -110,21 +125,93 @@ function overdue(deadline) {
     return deadline < nowTimestamp && deadline > preTimestamp;
 }
 
-function compareHomeworks(courseName, nowdata, predata) {
+async function delHomeworkEvent(homework) {
+    logger.debug(`Calendar: delEvent "${homework.title}"`)
+    try {
+        await google.calendar('v3').events.delete({
+            calendarId: config.calendar.calendarId,
+            eventId: homework.eventId
+        });
+        homework.eventId = undefined;
+        logger.debug('Event deleted: %s', homework.title);
+    } catch (err) {
+        if (err instanceof GaxiosError) {
+            logger.error('There was an error contacting the Calendar service: ' + err);
+            if (err.toString() == 'Error: Resource has been deleted') {
+                homework.eventId = undefined;
+            }
+        } else {
+            throw err;
+        }
+    }
+}
+
+async function addHomeworkEvent(courseName, homework) {
+    logger.debug(`Calendar: addEvent "${courseName} - ${homework.title}"`)
+    let event = {
+        'summary': `${courseName} - ${homework.title}`,
+        'description': reBlank(htmlToText(homework.description)),
+        'start': {
+            'dateTime': homework.deadline,
+            'timeZone': 'Asia/Shanghai',
+        },
+        'end': {
+            'dateTime': homework.deadline,
+            'timeZone': 'Asia/Shanghai',
+        },
+        'reminders': {
+            'useDefault': true
+        },
+    };
+    try {
+        let res = await google.calendar('v3').events.insert({
+            calendarId: config.calendar.calendarId,
+            resource: event,
+        });
+        homework.eventId = res.data.id;
+        logger.debug('Event created: %s', res.data.htmlLink);
+    } catch (err) {
+        if (err instanceof GaxiosError) {
+            logger.error('There was an error contacting the Calendar service: ' + err);
+        } else {
+            throw err;
+        }
+    }
+}
+
+async function updHomeworkEvent(courseName, homework) {
+    await delHomeworkEvent(homework);
+    await addHomeworkEvent(courseName, homework);
+}
+
+function compareHomeworks(courseName, nowdata, predata, tasks) {
     nowdata.forEach(homework => {
         const pre = predata.filter(x => { return homework.id == x.id });
         if (pre.length == 0) {
             logger.info(`New homework: <${courseName}> ${homework.title}`);
-            sendMessage(
+            tasks.push(addHomeworkEvent(courseName, homework));
+            let text =
                 `「${reMarkdown(courseName)}」布置了新的作业：` +
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
-                `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
-                'New homework: sendMessage FAIL');
+                `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`
+            if (homework.description != "") {
+                text +=
+                    `\n====================\n` +
+                    reMarkdown(reBlank(htmlToText(homework.description)));
+            }
+            sendMessage(text, 'New homework: sendMessage FAIL');
             return;
+        }
+        homework.eventId = pre[0].eventId;
+        if (homework.eventId === undefined && homework.submitted == false && homework.deadline > (new Date())) {
+            tasks.push(addHomeworkEvent(courseName, homework));
+        } else if (homework.eventId !== undefined && homework.submitted == true) {
+            tasks.push(delHomeworkEvent(homework));
         }
         let ret;
         if (homework.deadline.toISOString() != (typeof pre[0].deadline == 'string' ? pre[0].deadline : pre[0].deadline.toISOString())) {
             logger.info(`Homework deadline modified: <${courseName}> ${homework.title}`);
+            if (homework.eventId !== undefined) tasks.push(updHomeworkEvent(courseName, homework));
             sendMessage(
                 `截止时间变更：「${reMarkdown(courseName)}」` +
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
@@ -176,12 +263,15 @@ function compareNotifications(courseName, nowdata, predata) {
         nowdata.forEach(notification => {
             if (predata.filter(x => { return notification.id == x.id }).length == 0 && nowTimestamp - notification.publishTime < Date2ms(3, 0)) {
                 logger.info(`New nofitication: <${courseName}> ${notification.title}`);
-                sendMessage(
+                let text =
                     `「${reMarkdown(courseName)}」发布了新的公告：` +
-                    `[${reMarkdown(notification.title)}](${notification.url.replace(/learn2018/, 'learn')})\n` +
-                    `====================\n` +
-                    reMarkdown(reBlank(htmlToText(notification.content))),
-                    'New nofitication: sendMessage FAIL');
+                    `[${reMarkdown(notification.title)}](${notification.url.replace(/learn2018/, 'learn')})`;
+                if (notification.content != "") {
+                    text +=
+                        `\n====================\n` +
+                        reMarkdown(reBlank(htmlToText(notification.content)));
+                }
+                sendMessage(text, 'New nofitication: sendMessage FAIL');
             }
         });
     } catch (err) {
@@ -285,13 +375,17 @@ async function getCourseList(semester) {
                     compareFiles(course.name, course.files, coursePredata.files);
                     // compareDiscussions(course.discussions, coursePredata.discussions);
                     compareNotifications(course.name, course.notifications, coursePredata.notifications);
-                    compareHomeworks(course.name, course.homeworks, coursePredata.homeworks);
+                    compareHomeworks(course.name, course.homeworks, coursePredata.homeworks, tasks);
                     // compareQuestions(course.questions, coursePredata.questions);
                 } else {
                     logger.info(`New course: <${course.name}>`);
                     sendMessage(`新课程：「${reMarkdown(course.name)}」`, 'New course: sendMessage FAIL');
                 }
             }
+            await Promise.race([
+                Promise.all(tasks),
+                new Promise((resolve, reject) => setTimeout(() => reject(TIMEOUT), 120 * 1000))
+            ]);
 
             writeFileSync('data.json', JSON.stringify(nowdata, null, 4));
             predata = nowdata;
@@ -337,7 +431,7 @@ async function getCourseList(semester) {
                 logger.info('global.gc()');
             }
         } catch (e) {
-            console.log('`node --expose-gc index.js`');
+            logger.error('ERROR: `node --expose-gc index.js`');
         }
         await delay(3600 * 1000);
     }
