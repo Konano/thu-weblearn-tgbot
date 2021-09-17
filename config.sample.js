@@ -9,5 +9,9 @@ export let config = {
         name: '',
         pwd: '',
     },
+    calendar: {
+        keyFile: '',
+        calendarId: ''
+    },
     semesters: ['2021-2022-1']
 };
