@@ -110,6 +110,8 @@ temp/
 
 # End of https://www.gitignore.io/api/node
 
-/config.js
-/*.json
+config.js
+*.json
+secret/*
 log/*
+test.js

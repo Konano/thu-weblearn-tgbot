@@ -2,11 +2,11 @@ import { readFileSync, writeFileSync } from 'fs';
 import { htmlToText } from 'html-to-text';
 import { Learn2018Helper } from 'thu-learn-lib';
 import moment from 'moment';
-import { get } from 'http';
 import { request } from 'https';
 import { stringify } from 'querystring';
 import pkg from 'log4js';
 const { configure, getLogger } = pkg;
+
 import { config } from './config.js';
 
 configure({
@@ -60,7 +60,7 @@ async function delay(ms) {
 }
 
 function findCourse(predata, courseID) {
-    var ret = null;
+    let ret = null;
     predata.forEach(x => { if (x.id == courseID) ret = x });
     return ret;
 }
@@ -85,10 +85,15 @@ function compareFiles(courseName, nowdata, predata) {
     nowdata.forEach(file => {
         if (predata.filter(x => { return file.id == x.id }).length == 0 && nowTimestamp - file.uploadTime < Date2ms(3, 0)) {
             logger.info(`New file: <${courseName}> ${file.title}`);
-            sendMessage(
+            let text =
                 `「${reMarkdown(courseName)}」发布了新的文件：` +
-                `[${reMarkdown(file.title)}](${file.downloadUrl.replace(/learn2018/, 'learn')})`,
-                'New file: sendMessage FAIL');
+                `[${reMarkdown(file.title)}](${file.downloadUrl.replace(/learn2018/, 'learn')})`;
+            if (file.description != "") {
+                text +=
+                    `\n====================\n` +
+                    reMarkdown(reBlank(htmlToText(file.description)));
+            }
+            sendMessage(text, 'New file: sendMessage FAIL');
         }
     });
 }
@@ -115,11 +120,16 @@ function compareHomeworks(courseName, nowdata, predata) {
         const pre = predata.filter(x => { return homework.id == x.id });
         if (pre.length == 0) {
             logger.info(`New homework: <${courseName}> ${homework.title}`);
-            sendMessage(
+            let text =
                 `「${reMarkdown(courseName)}」布置了新的作业：` +
                 `[${reMarkdown(homework.title)}](${homework.url.replace(/learn2018/, 'learn')})\n` +
-                `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`,
-                'New homework: sendMessage FAIL');
+                `截止时间：${moment(homework.deadline).format('YYYY-MM-DD HH:mm:ss')}`
+            if (homework.description != "") {
+                text +=
+                    `\n====================\n` +
+                    reMarkdown(reBlank(htmlToText(homework.description)));
+            }
+            sendMessage(text, 'New homework: sendMessage FAIL');
             return;
         }
         let ret;
@@ -176,12 +186,15 @@ function compareNotifications(courseName, nowdata, predata) {
         nowdata.forEach(notification => {
             if (predata.filter(x => { return notification.id == x.id }).length == 0 && nowTimestamp - notification.publishTime < Date2ms(3, 0)) {
                 logger.info(`New nofitication: <${courseName}> ${notification.title}`);
-                sendMessage(
+                let text =
                     `「${reMarkdown(courseName)}」发布了新的公告：` +
-                    `[${reMarkdown(notification.title)}](${notification.url.replace(/learn2018/, 'learn')})\n` +
-                    `====================\n` +
-                    reMarkdown(reBlank(htmlToText(notification.content))),
-                    'New nofitication: sendMessage FAIL');
+                    `[${reMarkdown(notification.title)}](${notification.url.replace(/learn2018/, 'learn')})`;
+                if (notification.content != "") {
+                    text +=
+                        `\n====================\n` +
+                        reMarkdown(reBlank(htmlToText(notification.content)));
+                }
+                sendMessage(text, 'New nofitication: sendMessage FAIL');
             }
         });
     } catch (err) {
@@ -296,12 +309,6 @@ async function getCourseList(semester) {
             predata = nowdata;
             preTimestamp = nowTimestamp;
             logger.debug('Checked.');
-            get(config.heartbeat).on('error', error => {
-                logger.debug('alert error');
-                logger.debug(error);
-            }).end(() => {
-                logger.debug('alert end');
-            });
         } catch (err) {
             if (err === TIMEOUT) {
                 logger.error('Timeout.');
@@ -336,7 +343,7 @@ async function getCourseList(semester) {
                 logger.info('global.gc()');
             }
         } catch (e) {
-            console.log('`node --expose-gc index.js`');
+            logger.error('ERROR: `node --expose-gc index.js`');
         }
         await delay(3600 * 1000);
     }
