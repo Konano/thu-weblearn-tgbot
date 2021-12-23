@@ -223,10 +223,15 @@ is-ip@^1.0.0:
   dependencies:
     ip-regex "^1.0.0"
 
-js-base64@^3.4.5:
-  version "3.7.1"
-  resolved "https://registry.nlark.com/js-base64/download/js-base64-3.7.1.tgz?cache=0&sync_timestamp=1631612428227&other_urls=https%3A%2F%2Fregistry.nlark.com%2Fjs-base64%2Fdownload%2Fjs-base64-3.7.1.tgz#d5fa3ee5fe56a49db871516e70b0474238efcc68"
-  integrity sha1-1fo+5f5WpJ24cVFucLBHQjjvzGg=
+is-stream@^2.0.0:
+  version "2.0.1"
+  resolved "https://registry.nlark.com/is-stream/download/is-stream-2.0.1.tgz#fac1e3d53b97ad5a9d0ae9cef2389f5810a5c077"
+  integrity sha1-+sHj1TuXrVqdCunO8jifWBClwHc=
+
+js-base64@^3.7.2:
+  version "3.7.2"
+  resolved "https://registry.npmmirror.com/js-base64/download/js-base64-3.7.2.tgz#816d11d81a8aff241603d19ce5761e13e41d7745"
+  integrity sha512-NnRs6dsyqUXejqk/yv2aiXlAvOs56sLkX6nUdeaNezI5LFFLlsZjOThmwnrcwh5ZZRwZlCMnVAY3CvhIhoVEKQ==
 
 jsonfile@^4.0.0:
   version "4.0.0"
@@ -376,17 +381,17 @@ streamroller@^2.2.4:
     debug "^4.1.1"
     fs-extra "^8.1.0"
 
-thu-learn-lib@2.5.3:
-  version "2.5.3"
-  resolved "https://registry.nlark.com/thu-learn-lib/download/thu-learn-lib-2.5.3.tgz#1898b0e5ab19e430823a70ffa1e93adf7606d320"
-  integrity sha1-GJiw5asZ5DCCOnD/oek633YG0yA=
+thu-learn-lib@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.npmmirror.com/thu-learn-lib/download/thu-learn-lib-3.0.1.tgz#967a719706bbb01445e8f20e882c78e368bb0f4a"
+  integrity sha1-lnpxlwa7sBRF6PIOiCx442i7D0o=
   dependencies:
     cheerio "^1.0.0-rc.10"
     cross-fetch "^3.0.1"
     entities "^2.0.0"
     es6-denodeify "^0.1.5"
     form-data "^4.0.0"
-    js-base64 "^3.4.5"
+    js-base64 "^3.7.2"
     real-isomorphic-fetch "^3.0.0"
 
 tough-cookie-no-native@^2.4.1:

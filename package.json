@@ -13,7 +13,7 @@
     "html-to-text": "^8.0.0",
     "log4js": "^6.3.0",
     "moment": "^2.29.1",
-    "thu-learn-lib": "2.5.3"
+    "thu-learn-lib": "^3.0.1"
   },
   "devDependencies": {},
   "repository": "git+https://github.com/Konano/thu-weblearn-tgbot.git",
