@@ -339,12 +339,12 @@ async function getCourseList(semester) {
             let tasks = [];
             nowTimestamp = new Date();
 
-            // logger.debug('Getting course list...');
+            logger.debug('Getting course list...');
             let courses = [];
             for (let semester of config.semesters) {
                 courses = courses.concat(await getCourseList(semester));
             }
-            // logger.debug('Got course list.');
+            logger.debug('Got course list.');
             // logger.debug(courses);
             for (let course of courses) {
                 tasks.push((async () => {
