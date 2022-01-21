@@ -11,7 +11,7 @@
   "license": "MIT",
   "dependencies": {
     "html-to-text": "^8.0.0",
-    "log4js": "^6.3.0",
+    "log4js": "^6.4.0",
     "moment": "^2.29.1",
     "thu-learn-lib": "^3.0.1"
   },
