@@ -27,7 +27,7 @@ configure({
 });
 const logger = getLogger('default');
 
-function sendMessage(msg, errmsg) {
+function sendMessage(msg, errmsg = "sendMessage FAIL") {
     logger.debug('sendMessage Start');
     try {
         const params = {
@@ -141,10 +141,17 @@ async function delHomeworkEvent(homework) {
             logger.error('There was an error contacting the Calendar service: ' + err);
             if (err.toString() == 'Error: Resource has been deleted') {
                 homework.eventId = undefined;
+                return;
             }
+        } else if (err instanceof FetchError) {
+            logger.error('There was an FetchError contacting the Calendar service: ' + err);
         } else {
             throw err;
         }
+        sendMessage(
+            `delHomeworkEvent failed. (${homework.title})`,
+            "delHomeworkEvent: sendMessage FAIL"
+        )
     }
 }
 
@@ -175,9 +182,15 @@ async function addHomeworkEvent(courseName, homework) {
     } catch (err) {
         if (err instanceof GaxiosError) {
             logger.error('There was an error contacting the Calendar service: ' + err);
+        } else if (err instanceof FetchError) {
+            logger.error('There was an FetchError contacting the Calendar service: ' + err);
         } else {
             throw err;
         }
+        sendMessage(
+            `addHomeworkEvent failed. (${courseName} - ${homework.title})`,
+            "addHomeworkEvent: sendMessage FAIL"
+        )
     }
 }
 
