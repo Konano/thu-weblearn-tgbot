@@ -10,7 +10,7 @@
   "author": "Konano",
   "license": "MIT",
   "dependencies": {
-    "googleapis": "^87.0.0",
+    "googleapis": "^100.0.0",
     "html-to-text": "^8.0.0",
     "log4js": "^6.3.0",
     "moment": "^2.29.1",

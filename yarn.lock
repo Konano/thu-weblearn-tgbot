@@ -312,10 +312,10 @@ googleapis-common@^5.0.2:
     url-template "^2.0.8"
     uuid "^8.0.0"
 
-googleapis@^87.0.0:
-  version "87.0.0"
-  resolved "https://registry.nlark.com/googleapis/download/googleapis-87.0.0.tgz?cache=0&sync_timestamp=1631806164510&other_urls=https%3A%2F%2Fregistry.nlark.com%2Fgoogleapis%2Fdownload%2Fgoogleapis-87.0.0.tgz#b4fabbc4d7496491a67ac531b698d16983c00c8f"
-  integrity sha1-tPq7xNdJZJGmesUxtpjRaYPADI8=
+googleapis@^100.0.0:
+  version "100.0.0"
+  resolved "https://registry.npmmirror.com/googleapis/-/googleapis-100.0.0.tgz#baeeba7877ee7dd3250643b3803c4a9c24bcf8dd"
+  integrity sha512-RToFQGY54B756IDbjdyjb1vWFmn03bYpXHB2lIf0eq2UBYsIbYOLZ0kqSomfJnpclEukwEmMF7Jn6Wsev871ew==
   dependencies:
     google-auth-library "^7.0.2"
     googleapis-common "^5.0.2"
