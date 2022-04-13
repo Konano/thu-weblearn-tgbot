@@ -48,7 +48,9 @@ function sendMessage(msg, errmsg = "sendMessage FAIL") {
             logger.debug('request error');
             logger.debug(error);
             logger.error(errmsg);
-            sendMessage(msg, errmsg);
+            delay(10 * 1000).then(() => {
+                sendMessage(msg, errmsg);
+            });
         }).end(() => {
             logger.debug('request end');
         });
