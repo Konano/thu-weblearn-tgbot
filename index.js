@@ -11,13 +11,15 @@ import { config } from './config.js';
 
 configure({
     appenders: {
-        console: { type: 'console' },
+        stdout: { type: 'stdout' },
+        stderr: { type: 'stderr' },
         logfile: { type: 'file', filename: 'log/runtime.log', maxLogSize: 1024 * 128, backups: 10 },
-        consoleFilter: { type: 'logLevelFilter', level: 'info', appender: 'console' },
+        stdoutFilter: { type: 'logLevelFilter', level: 'info', maxLevel: 'warn', appender: 'stdout' },
+        stderrFilter: { type: 'logLevelFilter', level: 'error', appender: 'stderr' },
         fileFilter: { type: 'logLevelFilter', level: 'debug', appender: 'logfile' }
     },
     categories: {
-        default: { appenders: ['consoleFilter', 'fileFilter'], level: 'debug' }
+        default: { appenders: ['stdoutFilter', 'stderrFilter', 'fileFilter'], level: 'debug' }
     }
 });
 const logger = getLogger('default');
